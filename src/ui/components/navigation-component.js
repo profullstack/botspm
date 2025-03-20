@@ -18,7 +18,7 @@ class NavigationComponent extends HTMLElement {
         :host {
           display: block;
           width: 100%;
-          font-family: Arial, sans-serif;
+          font-family: var(--font-family-sans);
         }
         
         .nav-container {

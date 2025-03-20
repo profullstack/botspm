@@ -1,5 +1,8 @@
 /* main.css - Main stylesheet that imports all other stylesheets */
 
+/* Import fonts first */
+@import 'fonts.css';
+
 /* Import variables and theme */
 @import 'variables.css';
 @import 'themes.css';

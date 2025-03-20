@@ -25,7 +25,7 @@ class SetupComponent extends HTMLElement {
           align-items: center;
           width: 100%;
           height: 100vh;
-          font-family: Arial, sans-serif;
+          font-family: var(--font-family-sans);
           background-color: var(--background-color, #f8f9fa);
           padding: 20px;
           box-sizing: border-box;

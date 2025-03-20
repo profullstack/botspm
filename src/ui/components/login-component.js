@@ -26,6 +26,7 @@ class LoginComponent extends HTMLElement {
           background-color: var(--background-color, #f8f9fa);
           padding: 20px;
           box-sizing: border-box;
+          font-family: var(--font-family-sans);
         }
         
         .login-container {
