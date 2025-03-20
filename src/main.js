@@ -1,9 +1,10 @@
 // main.js - Electron main process for bots.pm desktop application
 
-import { app, BrowserWindow, ipcMain, dialog, Menu, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
+import { readFileSync } from 'fs';
 import { spawn } from 'child_process';
 import electronLog from 'electron-log';
 import Store from 'electron-store';
@@ -231,13 +232,25 @@ async function initDatabase() {
 function createWindow() {
   const { width, height } = store.get('windowBounds');
   
+  // Create a default icon as a fallback
+  const defaultIcon = nativeImage.createEmpty();
+  
+  // Try to use the SVG icon, but fall back to the default if it fails
+  let icon;
+  try {
+    icon = path.join(__dirname, '../assets/favicon.svg');
+  } catch (error) {
+    electronLog.error('Failed to load window icon:', error);
+    icon = defaultIcon;
+  }
+  
   mainWindow = new BrowserWindow({
     width,
     height,
     minWidth: 800,
     minHeight: 600,
     title: 'bots.pm',
-    icon: path.join(__dirname, '../assets/favicon.svg'),
+    icon: icon,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -268,8 +281,13 @@ function createWindow() {
   // Create application menu
   createMenu();
   
-  // Create system tray
-  createTray();
+  // Create system tray (but don't fail if it can't be created)
+  try {
+    createTray();
+  } catch (error) {
+    electronLog.error('Failed to create tray:', error);
+    // Continue without tray
+  }
 }
 
 /**
@@ -343,12 +361,24 @@ function createMenu() {
         {
           label: 'About',
           click: () => {
+            // Create a default icon as a fallback
+            const defaultIcon = nativeImage.createEmpty();
+            
+            // Try to use the SVG icon, but fall back to the default if it fails
+            let icon;
+            try {
+              icon = path.join(__dirname, '../assets/favicon.svg');
+            } catch (error) {
+              electronLog.error('Failed to load about dialog icon:', error);
+              icon = defaultIcon;
+            }
+            
             dialog.showMessageBox(mainWindow, {
               title: 'About bots.pm',
               message: 'bots.pm',
               detail: `Version: ${app.getVersion()}\nElectron: ${process.versions.electron}\nChrome: ${process.versions.chrome}\nNode.js: ${process.versions.node}\nV8: ${process.versions.v8}`,
               buttons: ['OK'],
-              icon: path.join(__dirname, '../assets/favicon.svg')
+              icon: icon
             });
           }
         }
@@ -364,51 +394,75 @@ function createMenu() {
  * Creates the system tray icon
  */
 function createTray() {
-  const iconPath = path.join(__dirname, '../assets/favicon.svg');
-  tray = new Tray(iconPath);
-  
-  const contextMenu = Menu.buildFromTemplate([
-    { 
-      label: 'Open bots.pm', 
-      click: () => {
-        if (mainWindow === null) {
-          createWindow();
+  try {
+    // Create a default icon as a fallback
+    const defaultIcon = nativeImage.createEmpty();
+    
+    // Try to use the SVG icon, but fall back to the default if it fails
+    let iconPath;
+    try {
+      // Try to create a native image from the SVG
+      const svgPath = path.join(__dirname, '../assets/favicon.svg');
+      const svgData = readFileSync(svgPath, 'utf8');
+      const img = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svgData).toString('base64')}`);
+      
+      // If we get here, we successfully created an image
+      iconPath = img;
+    } catch (error) {
+      electronLog.error('Failed to load tray icon from SVG:', error);
+      iconPath = defaultIcon;
+    }
+    
+    tray = new Tray(iconPath);
+    
+    const contextMenu = Menu.buildFromTemplate([
+      { 
+        label: 'Open bots.pm', 
+        click: () => {
+          if (mainWindow === null) {
+            createWindow();
+          } else {
+            mainWindow.show();
+          }
+        }
+      },
+      { 
+        label: 'Start All Bots', 
+        click: startAllBots 
+      },
+      { 
+        label: 'Stop All Bots', 
+        click: stopAllBots 
+      },
+      { type: 'separator' },
+      { 
+        label: 'Quit', 
+        click: () => {
+          app.quit();
+        }
+      }
+    ]);
+    
+    tray.setToolTip('bots.pm');
+    tray.setContextMenu(contextMenu);
+    
+    tray.on('click', () => {
+      if (mainWindow === null) {
+        createWindow();
+      } else {
+        if (mainWindow.isVisible()) {
+          mainWindow.focus();
         } else {
           mainWindow.show();
         }
       }
-    },
-    { 
-      label: 'Start All Bots', 
-      click: startAllBots 
-    },
-    { 
-      label: 'Stop All Bots', 
-      click: stopAllBots 
-    },
-    { type: 'separator' },
-    { 
-      label: 'Quit', 
-      click: () => {
-        app.quit();
-      }
-    }
-  ]);
-  
-  tray.setToolTip('bots.pm');
-  tray.setContextMenu(contextMenu);
-  
-  tray.on('click', () => {
-    if (mainWindow === null) {
-      createWindow();
-    } else {
-      if (mainWindow.isVisible()) {
-        mainWindow.focus();
-      } else {
-        mainWindow.show();
-      }
-    }
-  });
+    });
+    
+    electronLog.info('System tray created successfully');
+  } catch (error) {
+    electronLog.error('Failed to create system tray:', error);
+    // Continue without tray if it fails
+  }
 }
 
 /**
@@ -828,23 +882,34 @@ ipcMain.handle('update-bot-personality', async (event, { botId, personalityData 
 
 // App lifecycle events
 app.on('ready', async () => {
-  await initDatabase();
-  createWindow();
-  
-  // Copy default config to user data directory if it doesn't exist
-  const userConfigPath = path.join(app.getPath('userData'), 'config.json');
-  const defaultConfigPath = path.join(__dirname, '../config.json');
-  
-  fs.access(userConfigPath)
-    .catch(async () => {
+  try {
+    // Copy default config to user data directory if it doesn't exist
+    const userConfigPath = path.join(app.getPath('userData'), 'config.json');
+    const defaultConfigPath = path.join(__dirname, '../config.json');
+    
+    try {
+      await fs.access(userConfigPath);
+    } catch (error) {
+      // Config doesn't exist, create it
       try {
         const defaultConfig = await fs.readFile(defaultConfigPath, 'utf8');
         await fs.writeFile(userConfigPath, defaultConfig);
         electronLog.info('Created default config in user data directory');
-      } catch (error) {
-        electronLog.error('Failed to create default config:', error);
+      } catch (configError) {
+        electronLog.error('Failed to create default config:', configError);
+        dialog.showErrorBox('Configuration Error', 'Failed to create default configuration file.');
       }
-    });
+    }
+    
+    // Initialize database before creating window
+    await initDatabase();
+    
+    // Create window after database is initialized
+    createWindow();
+  } catch (error) {
+    electronLog.error('Application startup error:', error);
+    dialog.showErrorBox('Startup Error', `Failed to start application: ${error.message}`);
+  }
 });
 
 app.on('window-all-closed', () => {
