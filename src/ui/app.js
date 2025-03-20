@@ -8,7 +8,7 @@ import apiClient from './api-client.js';
 
 // Application state
 let appConfig = null;
-let darkMode = true; // Default to dark mode
+let darkMode = false; // Default to light mode, will be updated based on preferences
 let activeBots = [];
 let commandHistory = [];
 let activeSession = null;
@@ -59,8 +59,31 @@ async function initializeApp() {
     
     // Check for dark mode preference
     const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    darkMode = localStorage.getItem('darkMode') === 'false' ? false : true; // Default to true unless explicitly set to false
+    const savedDarkModePref = localStorage.getItem('darkMode');
+    
+    // Set dark mode based on saved preference or system preference
+    if (savedDarkModePref === 'true') {
+      darkMode = true;
+    } else if (savedDarkModePref === 'false') {
+      darkMode = false;
+    } else if (savedDarkModePref === 'system') {
+      darkMode = systemPrefersDark;
+    } else {
+      // If no preference is saved, use system preference
+      darkMode = systemPrefersDark;
+      localStorage.setItem('darkMode', 'system');
+    }
+    
     updateDarkMode();
+    
+    // Setup media query listener for system preference changes
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    darkModeMediaQuery.addEventListener('change', (e) => {
+      if (localStorage.getItem('darkMode') === 'system') {
+        darkMode = e.matches;
+        updateDarkMode();
+      }
+    });
     
     // Setup IPC event listeners
     setupIPCListeners();
@@ -558,6 +581,12 @@ export async function saveUserSettings(settings) {
       // Update local settings
       userSettings = { ...userSettings, ...settings };
       addLogEntry('User settings saved successfully', 'info');
+      
+      // Apply dark mode setting if it was changed
+      if (settings.DARK_MODE !== undefined) {
+        applyDarkModeSetting(settings.DARK_MODE);
+      }
+      
       return true;
     } else {
       addLogEntry(`Failed to save user settings: ${result.message}`, 'error');
@@ -567,6 +596,22 @@ export async function saveUserSettings(settings) {
     addLogEntry(`Error saving user settings: ${error.message}`, 'error');
     return false;
   }
+}
+
+// Apply dark mode setting
+function applyDarkModeSetting(darkModeSetting) {
+  const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (darkModeSetting === 'true') {
+    darkMode = true;
+  } else if (darkModeSetting === 'false') {
+    darkMode = false;
+  } else if (darkModeSetting === 'system') {
+    darkMode = systemPrefersDark;
+  }
+  
+  localStorage.setItem('darkMode', darkModeSetting);
+  updateDarkMode();
 }
 
 // Get user settings
@@ -581,7 +626,6 @@ export function updateDarkMode() {
   } else {
     document.body.classList.remove('dark-mode');
   }
-  localStorage.setItem('darkMode', darkMode.toString());
   
   window.dispatchEvent(new CustomEvent(AppEvents.DARK_MODE_CHANGED, { 
     detail: { darkMode } 
@@ -593,6 +637,8 @@ export function updateDarkMode() {
 // Toggle dark mode
 export function toggleDarkMode() {
   darkMode = !darkMode;
+  const darkModeValue = darkMode ? 'true' : 'false';
+  localStorage.setItem('darkMode', darkModeValue);
   return updateDarkMode();
 }
 
