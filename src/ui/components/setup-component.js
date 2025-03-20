@@ -234,7 +234,7 @@ class SetupComponent extends HTMLElement {
       
       <div class="setup-container">
         <div class="setup-header">
-          <img src="../../../public/images/logo.svg" alt="bots.pm Logo" class="logo">
+          <img src="../../public/images/logo.svg" alt="bots.pm Logo" class="logo">
           <h1>Welcome to bots.pm</h1>
           <p>Let's set up your environment to get started</p>
         </div>

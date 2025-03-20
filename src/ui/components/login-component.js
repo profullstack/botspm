@@ -149,7 +149,7 @@ class LoginComponent extends HTMLElement {
       
       <div class="login-container">
         <div class="app-logo">
-          <img src="../../../public/images/logo.svg" alt="bots.pm Logo">
+          <img src="../../public/images/logo.svg" alt="bots.pm Logo">
           <h1>bots.pm</h1>
           <p>Manage your AI bots across multiple platforms</p>
         </div>

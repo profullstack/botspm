@@ -218,7 +218,7 @@ class NavigationComponent extends HTMLElement {
       <nav class="nav-container">
         <div class="nav-header">
           <div class="logo-container">
-            <img src="../../../public/images/logo.svg" alt="bots.pm Logo" class="logo">
+            <img src="../../public/images/logo.svg" alt="bots.pm Logo" class="logo">
             <span class="app-name">bots.pm</span>
           </div>
           <button class="nav-toggle" id="navToggle">≡</button>
