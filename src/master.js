@@ -1,7 +1,8 @@
 // master.js - Master process managing multiple AI bots for multi-platform lives (YouTube, X.com, TikTok) with auto-platform setup, credential handling, automated account creation, and CLI-based director commands
 
 import { spawn } from 'child_process';
-import Database from 'better-sqlite3';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import puppeteer from 'puppeteer-core';
 import fetch from 'node-fetch';
 import readline from 'readline';
@@ -312,10 +313,13 @@ async function setupDatabase(dbPath, botsConfig, logger) {
     await fs.mkdir(dbDir, { recursive: true });
     
     // Open database
-    const db = new Database(dbPath, { verbose: logger.debug });
+    const db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
     
     // Create tables if they don't exist
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS bot_logs (
         id INTEGER PRIMARY KEY, 
         bot_name TEXT, 
@@ -327,7 +331,7 @@ async function setupDatabase(dbPath, botsConfig, logger) {
       )
     `);
     
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS bot_accounts (
         id INTEGER PRIMARY KEY, 
         bot_name TEXT, 
@@ -341,7 +345,7 @@ async function setupDatabase(dbPath, botsConfig, logger) {
       )
     `);
     
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS director_commands (
         id INTEGER PRIMARY KEY,
         command TEXT,
@@ -351,14 +355,14 @@ async function setupDatabase(dbPath, botsConfig, logger) {
     `);
     
     // Insert or update bot accounts
-    const insertStmt = db.prepare(`
+    const stmt = await db.prepare(`
       INSERT OR REPLACE INTO bot_accounts 
       (bot_name, platform, username, password, signup_url, stream_key) 
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     
     for (const bot of botsConfig) {
-      insertStmt.run(
+      await stmt.run(
         bot.name, 
         bot.platform, 
         bot.username, 
@@ -387,14 +391,12 @@ async function setupDatabase(dbPath, botsConfig, logger) {
  * @param {Object} logger - Winston logger instance
  * @returns {Promise<void>}
  */
-function storeBotInteraction(db, botName, gender, platform, input, response, logger) {
+async function storeBotInteraction(db, botName, gender, platform, input, response, logger) {
   try {
-    const stmt = db.prepare(`
+    await db.run(`
       INSERT INTO bot_logs (bot_name, gender, platform, input, response) 
       VALUES (?, ?, ?, ?, ?)
-    `);
-    
-    stmt.run(botName, gender, platform, input, response);
+    `, botName, gender, platform, input, response);
     
     logger.debug(`Stored interaction for ${botName}`);
   } catch (error) {
@@ -541,8 +543,7 @@ function startDirectorCLI(db, directorCommands, logger) {
       directorCommands.push(message);
       
       try {
-        const stmt = db.prepare('INSERT INTO director_commands (command) VALUES (?)');
-        stmt.run(message);
+        await db.run('INSERT INTO director_commands (command) VALUES (?)', message);
         logger.info(`Director instruction added: ${message}`);
       } catch (error) {
         logger.error(`Failed to store director command: ${error.message}`);
@@ -560,7 +561,7 @@ Available commands:
       `);
     } else if (trimmedLine === '--list') {
       try {
-        const bots = db.prepare('SELECT bot_name, platform FROM bot_accounts').all();
+        const bots = await db.all('SELECT bot_name, platform FROM bot_accounts');
         console.log('\nActive bots:');
         bots.forEach(bot => {
           console.log(`- ${bot.bot_name} on ${bot.platform}`);
@@ -572,9 +573,10 @@ Available commands:
     } else if (trimmedLine.startsWith('--history ')) {
       const botName = trimmedLine.replace('--history ', '');
       try {
-        const logs = db.prepare(
-          'SELECT input, response, created_at FROM bot_logs WHERE bot_name = ? ORDER BY created_at DESC LIMIT 5'
-        ).all(botName);
+        const logs = await db.all(
+          'SELECT input, response, created_at FROM bot_logs WHERE bot_name = ? ORDER BY created_at DESC LIMIT 5',
+          botName
+        );
         
         if (logs.length === 0) {
           console.log(`No history found for bot ${botName}`);
@@ -671,8 +673,7 @@ export async function masterProcess(providedConfig = null) {
       addDirectorCommand: async (command) => {
         directorCommands.push(command);
         try {
-          const stmt = db.prepare('INSERT INTO director_commands (command) VALUES (?)');
-          stmt.run(command);
+          await db.run('INSERT INTO director_commands (command) VALUES (?)', command);
           logger.info(`Director instruction added: ${command}`);
           return true;
         } catch (error) {
@@ -702,7 +703,7 @@ export async function masterProcess(providedConfig = null) {
       },
       
       // Method to get bot status
-      getStatus: () => {
+      getStatus: async () => {
         try {
           const botStatus = bots.map(bot => ({
             name: bot.name,
@@ -712,9 +713,9 @@ export async function masterProcess(providedConfig = null) {
             gender: bot.gender
           }));
           
-          const recentCommands = db.prepare(
+          const recentCommands = await db.all(
             'SELECT command, created_at FROM director_commands ORDER BY created_at DESC LIMIT 10'
-          ).all();
+          );
           
           return {
             bots: botStatus,
@@ -752,7 +753,7 @@ export async function masterProcess(providedConfig = null) {
               await pipeAudioBufferToFfmpeg(bot.ffmpegProcess.stdin, audioBuffer, logger);
               
               // Store interaction in database
-              storeBotInteraction(
+              await storeBotInteraction(
                 db, 
                 bot.name, 
                 bot.gender, 

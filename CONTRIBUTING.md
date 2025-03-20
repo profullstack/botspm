@@ -10,7 +10,41 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 
 1. **Fork the repository** on GitHub
 2. **Clone your fork** to your local machine
-3. **Set up the development environment** by following the instructions in the README.md
+3. **Set up the development environment** by following the instructions below
+
+### Development Environment Setup
+
+1. Ensure you have Node.js v20.x installed (v20.11.1 recommended)
+   ```bash
+   # Check your Node.js version
+   node --version
+   
+   # If using nvm, you can install and use the correct version
+   nvm install 20.11.1
+   nvm use 20.11.1
+   ```
+
+2. Install pnpm (v8.15.4 or later)
+   ```bash
+   npm install -g pnpm
+   
+   # Verify pnpm version
+   pnpm --version
+   ```
+
+3. Run the setup script
+   ```bash
+   # Make the script executable
+   chmod +x bin/setup.sh
+   
+   # Run the setup script
+   ./bin/setup.sh
+   ```
+
+4. Start the development server
+   ```bash
+   pnpm dev
+   ```
 
 ## Development Workflow
 
@@ -66,6 +100,30 @@ Fixes #123
 - Use kebab-case for class names
 - Use CSS variables for theming
 
+## Package Management
+
+This project uses pnpm for package management. Please do not use npm or yarn.
+
+### Adding Dependencies
+
+```bash
+# Add a production dependency
+pnpm add package-name
+
+# Add a development dependency
+pnpm add -D package-name
+```
+
+### Updating Dependencies
+
+```bash
+# Update all dependencies
+pnpm update
+
+# Update a specific dependency
+pnpm update package-name
+```
+
 ## Testing
 
 - Write tests for all new features and bug fixes
@@ -74,7 +132,7 @@ Fixes #123
 
 To run tests:
 ```bash
-npm test
+pnpm test
 ```
 
 ## Documentation
@@ -92,7 +150,7 @@ When reporting bugs, please include:
 - Expected behavior
 - Actual behavior
 - Screenshots if applicable
-- Environment information (OS, browser, etc.)
+- Environment information (OS, browser, Node.js version, pnpm version)
 
 ## Feature Requests
 

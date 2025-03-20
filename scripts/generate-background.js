@@ -1,81 +1,67 @@
-#!/usr/bin/env node
+// generate-background.js - Generate a placeholder background image for streaming
 
-/**
- * This script creates a placeholder background image for streaming.
- * Instead of generating an actual image, it downloads a placeholder from a public API.
- * 
- * Usage: node scripts/generate-background.js
- */
-
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createWriteStream } from 'fs';
-import { pipeline } from 'stream/promises';
-import fetch from 'node-fetch';
 
 // Get the directory name of the current module
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const outputPath = path.join(__dirname, '..', 'static_background.png');
+
+// Define background image path
+const backgroundPath = path.join(__dirname, '../static_background.png');
 
 /**
- * Downloads an image from a URL and saves it to the specified path
- * @param {string} url - The URL of the image to download
- * @param {string} outputPath - The path where the image will be saved
+ * Generate a simple SVG background
+ * @param {number} width - Background width in pixels
+ * @param {number} height - Background height in pixels
+ * @returns {string} - SVG content
  */
-async function downloadImage(url, outputPath) {
-  console.log(`Downloading image from ${url}...`);
+function generateSvgBackground(width = 1920, height = 1080) {
+  const primaryColor = '#4a6cf7';
+  const secondaryColor = '#6c757d';
   
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${primaryColor};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:${secondaryColor};stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="${width}" height="${height}" fill="url(#grad1)" />
+  <text x="${width / 2}" y="${height / 2}" font-family="Arial" font-size="72" fill="white" text-anchor="middle" dominant-baseline="middle">Multi-Platform AI Bots</text>
+  <text x="${width / 2}" y="${height / 2 + 100}" font-family="Arial" font-size="36" fill="white" text-anchor="middle" dominant-baseline="middle">Streaming Background</text>
+</svg>`;
+}
+
+/**
+ * Save a placeholder background image
+ * This is a placeholder. In a real app, you would use a proper SVG to PNG converter.
+ * @param {string} svgContent - SVG content
+ * @param {string} outputPath - Output path for the PNG file
+ */
+async function savePlaceholderBackground(svgContent, outputPath) {
   try {
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.statusText}`);
-    }
-    
-    const fileStream = createWriteStream(outputPath);
-    await pipeline(response.body, fileStream);
-    
-    console.log(`Background image saved to: ${outputPath}`);
+    // Create a simple text file with the SVG content
+    // In a real app, this would be a proper PNG file
+    await fs.writeFile(outputPath, svgContent);
+    console.log(`Generated placeholder background: ${outputPath}`);
   } catch (error) {
-    console.error('Error downloading image:', error);
-    createFallbackImage(outputPath);
+    console.error(`Error generating background:`, error);
   }
 }
 
 /**
- * Creates a simple fallback image if download fails
- * @param {string} outputPath - The path where the image will be saved
+ * Main function to generate the background
  */
-function createFallbackImage(outputPath) {
-  console.log('Creating fallback image...');
-  
-  // Create a simple 1x1 pixel PNG (minimal valid PNG)
-  const pngHeader = Buffer.from([
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00,
-    0x0C, 0x49, 0x44, 0x41, 0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00,
-    0x00, 0x03, 0x01, 0x01, 0x00, 0x18, 0xDD, 0x8D, 0xB0, 0x00, 0x00, 0x00,
-    0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
-  ]);
-  
+async function generateBackground() {
   try {
-    fs.writeFileSync(outputPath, pngHeader);
-    console.log(`Fallback image created at: ${outputPath}`);
+    const svgContent = generateSvgBackground();
+    await savePlaceholderBackground(svgContent, backgroundPath);
+    console.log('Background generated successfully');
   } catch (error) {
-    console.error('Error creating fallback image:', error);
+    console.error('Error generating background:', error);
   }
 }
 
-// Main function
-async function main() {
-  // Use a placeholder image service
-  const width = 1280;
-  const height = 720;
-  const imageUrl = `https://picsum.photos/${width}/${height}?random=${Date.now()}`;
-  
-  await downloadImage(imageUrl, outputPath);
-}
-
-main().catch(console.error);
+// Run the background generation
+generateBackground();

@@ -9,8 +9,9 @@ import electronLog from 'electron-log';
 import Store from 'electron-store';
 import dotenv from 'dotenv';
 import { masterProcess } from './master.js';
-import Database from 'better-sqlite3';
-import bcrypt from 'bcryptjs';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import CryptoJS from 'crypto-js';
 
 // Load environment variables
 dotenv.config();
@@ -52,10 +53,13 @@ async function initDatabase() {
     await fs.mkdir(path.dirname(dbPath), { recursive: true });
     
     // Open database
-    db = new Database(dbPath);
+    db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
     
     // Create tables if they don't exist
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
@@ -64,7 +68,7 @@ async function initDatabase() {
       )
     `);
     
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS user_settings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -77,7 +81,7 @@ async function initDatabase() {
       )
     `);
     
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS bot_accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -93,7 +97,7 @@ async function initDatabase() {
       )
     `);
     
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS bot_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         bot_id INTEGER NOT NULL,
@@ -104,7 +108,7 @@ async function initDatabase() {
       )
     `);
     
-    db.exec(`
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS director_commands (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -305,13 +309,15 @@ function stopAllBots() {
 // User authentication functions
 async function authenticateUser(username, password) {
   try {
-    const user = db.prepare('SELECT id, username, password FROM users WHERE username = ?').get(username);
+    const user = await db.get('SELECT id, username, password FROM users WHERE username = ?', username);
     
     if (!user) {
       return { success: false, message: 'User not found' };
     }
     
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    // Use CryptoJS to verify password
+    const hashedPassword = CryptoJS.SHA256(password).toString();
+    const passwordMatch = hashedPassword === user.password;
     
     if (!passwordMatch) {
       return { success: false, message: 'Invalid password' };
@@ -327,20 +333,23 @@ async function authenticateUser(username, password) {
 async function registerUser(username, password) {
   try {
     // Check if username already exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', username);
     
     if (existingUser) {
       return { success: false, message: 'Username already exists' };
     }
     
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Hash password with CryptoJS
+    const hashedPassword = CryptoJS.SHA256(password).toString();
     
     // Insert new user
-    const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
+    const result = await db.run(
+      'INSERT INTO users (username, password) VALUES (?, ?)',
+      username,
+      hashedPassword
+    );
     
-    return { success: true, userId: result.lastInsertId };
+    return { success: true, userId: result.lastID };
   } catch (error) {
     electronLog.error('Registration error:', error);
     return { success: false, message: error.message };
@@ -349,21 +358,25 @@ async function registerUser(username, password) {
 
 async function saveUserSettings(userId, settings) {
   try {
-    const stmt = db.prepare('INSERT OR REPLACE INTO user_settings (user_id, key, value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)');
-    
     // Begin transaction
-    const transaction = db.transaction((settings) => {
-      for (const [key, value] of Object.entries(settings)) {
-        if (value !== undefined && value !== null) {
-          stmt.run(userId, key, value);
-        }
-      }
-    });
+    await db.run('BEGIN TRANSACTION');
     
-    transaction(settings);
+    for (const [key, value] of Object.entries(settings)) {
+      if (value !== undefined && value !== null) {
+        await db.run(
+          'INSERT OR REPLACE INTO user_settings (user_id, key, value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+          userId,
+          key,
+          value
+        );
+      }
+    }
+    
+    await db.run('COMMIT');
     
     return { success: true };
   } catch (error) {
+    await db.run('ROLLBACK');
     electronLog.error('Save settings error:', error);
     return { success: false, message: error.message };
   }
@@ -371,7 +384,7 @@ async function saveUserSettings(userId, settings) {
 
 async function getUserSettings(userId) {
   try {
-    const rows = db.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').all(userId);
+    const rows = await db.all('SELECT key, value FROM user_settings WHERE user_id = ?', userId);
     
     const settings = {};
     rows.forEach(row => {
@@ -387,11 +400,11 @@ async function getUserSettings(userId) {
 
 async function getBotsByUser(userId) {
   try {
-    const bots = db.prepare(`
+    const bots = await db.all(`
       SELECT id, bot_name, platform, username, stream_key 
       FROM bot_accounts 
       WHERE user_id = ?
-    `).all(userId);
+    `, userId);
     
     return bots;
   } catch (error) {
@@ -402,10 +415,10 @@ async function getBotsByUser(userId) {
 
 async function createBot(userId, botData) {
   try {
-    const result = db.prepare(`
+    const result = await db.run(`
       INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `,
       userId,
       botData.name,
       botData.platform,
@@ -415,7 +428,7 @@ async function createBot(userId, botData) {
       botData.streamKey
     );
     
-    return { success: true, botId: result.lastInsertId };
+    return { success: true, botId: result.lastID };
   } catch (error) {
     electronLog.error('Create bot error:', error);
     return { success: false, message: error.message };

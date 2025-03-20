@@ -18,8 +18,8 @@ An Electron desktop application for managing multiple AI bots across streaming p
 
 ### Prerequisites
 
-- Node.js 16.x or higher
-- npm or pnpm
+- Node.js v20.x (v20.11.1 recommended)
+- pnpm (v8.15.4 or later)
 - Git
 
 ### Installation
@@ -30,17 +30,50 @@ An Electron desktop application for managing multiple AI bots across streaming p
    cd multi-platform-ai-bots
    ```
 
-2. Install dependencies:
+2. Use the correct Node.js version:
    ```bash
-   npm install
-   # or with pnpm
-   pnpm install
+   # If using nvm
+   nvm use
+   
+   # If using volta
+   # Volta will automatically use the correct version
+   
+   # Verify Node.js version
+   node --version
+   # Should output v20.x.x
    ```
 
-3. Start the development server:
+3. Install pnpm if you don't have it:
    ```bash
-   npm run dev
-   # or with pnpm
+   npm install -g pnpm
+   
+   # Verify pnpm version
+   pnpm --version
+   # Should output 8.x.x or later
+   ```
+
+4. Run the setup script:
+   ```bash
+   # Make the script executable if needed
+   chmod +x bin/setup.sh
+   
+   # Run the setup script
+   ./bin/setup.sh
+   
+   # Or use pnpm
+   pnpm setup
+   ```
+
+   The setup script will:
+   - Verify the correct Node.js version
+   - Install pnpm if not already installed
+   - Clean any previous installation
+   - Install dependencies with pnpm
+   - Fix Electron installation issues
+   - Generate placeholder assets
+
+5. Start the development server:
+   ```bash
    pnpm dev
    ```
 
@@ -60,6 +93,7 @@ The application supports multiple users, each with their own settings and bots:
 ```
 multi-platform-ai-bots/
 ├── assets/                # Application assets (icons, images)
+├── bin/                   # Scripts for setup and maintenance
 ├── public/                # Public assets and styles
 │   └── styles/            # CSS files
 │       ├── components/    # Component-specific styles
@@ -74,6 +108,10 @@ multi-platform-ai-bots/
 │   └── master.js          # Bot management logic
 └── ...                    # Configuration files
 ```
+
+### pnpm Workspace
+
+The project uses pnpm workspaces for dependency management. The workspace is configured in `pnpm-workspace.yaml`.
 
 ### Database Schema
 
@@ -90,11 +128,11 @@ The application uses SQLite for data storage with the following schema:
 To build the application for production:
 
 ```bash
-npm run build
+pnpm build
 # or for a specific platform
-npm run build:mac
-npm run build:win
-npm run build:linux
+pnpm build:mac
+pnpm build:win
+pnpm build:linux
 ```
 
 ## 🤖 Bot Configuration
@@ -128,13 +166,59 @@ These can be configured through the setup interface after logging in.
 
 ## 🔧 Troubleshooting
 
-If you encounter build issues with native modules:
+### Electron Installation Issues
+
+If you encounter errors with Electron installation:
 
 ```bash
-npm run rebuild
+# Use the setup script to fix Electron installation
+./bin/setup.sh
 ```
 
-This will rebuild the native modules for your Electron version.
+The setup script will automatically fix common Electron installation issues.
+
+### Node.js Version Issues
+
+If you encounter errors related to Node.js version:
+
+```bash
+# Install the correct Node.js version
+nvm install 20.11.1
+nvm use 20.11.1
+
+# Then run the setup script
+./bin/setup.sh
+```
+
+### pnpm Issues
+
+If you encounter issues with pnpm:
+
+```bash
+# Update pnpm to the latest version
+npm install -g pnpm@latest
+
+# Clear pnpm store
+pnpm store prune
+
+# Then run the setup script
+./bin/setup.sh
+```
+
+### Manual Electron Installation
+
+If you still have issues with Electron:
+
+```bash
+# Remove the electron directory
+rm -rf node_modules/.pnpm/electron*
+
+# Install electron globally with pnpm
+pnpm add -g electron@28.0.0
+
+# Link the global electron
+pnpm link --global electron
+```
 
 ## 📝 License
 
@@ -144,8 +228,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Electron](https://www.electronjs.org/) - Desktop application framework
 - [Puppeteer](https://pptr.dev/) - Headless browser automation
-- [Better-SQLite3](https://github.com/JoshuaWise/better-sqlite3) - SQLite database interface
-- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) - Password hashing library
+- [SQLite](https://www.sqlite.org/) - Embedded database
+- [CryptoJS](https://github.com/brix/crypto-js) - JavaScript library of crypto standards
+- [pnpm](https://pnpm.io/) - Fast, disk space efficient package manager
 
 ## 🤝 Contributing
 

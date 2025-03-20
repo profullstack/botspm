@@ -57,6 +57,11 @@ assets/icons/win/
 .eslintcache
 .stylelintcache
 
+# pnpm specific
+.pnpm-debug.log
+.pnpm-store/
+pnpm-lock.yaml
+
 # Coverage directory used by tools like istanbul
 coverage/
 
