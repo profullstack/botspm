@@ -36,7 +36,7 @@ async function loadConfig(providedConfig = null) {
     // If config file doesn't exist, create it with default values
     const defaultConfig = {
       DATABASE_PATH: path.join(__dirname, '../data/bots.sqlite'),
-      DATABASE_ENGINE: 'better-sqlite3',
+      DATABASE_ENGINE: 'sqlite3',
       STATIC_BACKGROUND_PATH: path.join(__dirname, '../static_background.png'),
       LOG_LEVEL: 'info',
       PLATFORMS: [
@@ -298,7 +298,7 @@ function spawnFfmpeg(streamKey, ffmpegOptions, backgroundPath, logger) {
  * @param {string} dbEngine - Database engine to use ('sqlite3' or 'better-sqlite3')
  * @returns {Promise<Object>} Database connection
  */
-async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqlite3') {
+async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'sqlite3') {
   try {
     logger.info(`Setting up database at ${dbPath} using ${dbEngine} engine`);
     
@@ -464,7 +464,7 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
  * @param {string} dbEngine - Database engine being used
  * @returns {Promise<Array>} Array of bot objects
  */
-async function getAllBots(db, logger, dbEngine = 'better-sqlite3') {
+async function getAllBots(db, logger, dbEngine = 'sqlite3') {
   try {
     let bots;
     
@@ -510,7 +510,7 @@ async function getAllBots(db, logger, dbEngine = 'better-sqlite3') {
  * @param {string} dbEngine - Database engine being used
  * @returns {Promise<void>}
  */
-async function storeBotInteraction(db, botName, gender, platform, input, response, logger, dbEngine = 'better-sqlite3') {
+async function storeBotInteraction(db, botName, gender, platform, input, response, logger, dbEngine = 'sqlite3') {
   try {
     if (dbEngine === 'sqlite3') {
       await db.run(`
@@ -655,7 +655,7 @@ async function pipeAudioBufferToFfmpeg(ffmpegStdin, buffer, logger) {
  * @param {string} dbEngine - Database engine being used
  * @returns {Object} Readline interface
  */
-function startDirectorCLI(db, directorCommands, logger, dbEngine = 'better-sqlite3') {
+function startDirectorCLI(db, directorCommands, logger, dbEngine = 'sqlite3') {
   const rl = readline.createInterface({ 
     input: process.stdin, 
     output: process.stdout,
@@ -766,7 +766,7 @@ export async function masterProcess(providedConfig = null) {
     logger.level = config.LOG_LEVEL || 'info';
     
     // Get database engine from config
-    const dbEngine = config.DATABASE_ENGINE || 'better-sqlite3';
+    const dbEngine = config.DATABASE_ENGINE || 'sqlite3';
     logger.info(`Using ${dbEngine} database engine`);
     
     // Resolve database path

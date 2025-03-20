@@ -54,10 +54,10 @@ async function initDatabase() {
       config = JSON.parse(configFile);
     } catch (error) {
       electronLog.error('Failed to load config:', error);
-      config = { DATABASE_ENGINE: 'better-sqlite3' }; // Default to better-sqlite3 if config can't be loaded
+      config = { DATABASE_ENGINE: 'sqlite3' }; // Default to sqlite3 if config can't be loaded
     }
     
-    const dbEngine = config.DATABASE_ENGINE || 'better-sqlite3';
+    const dbEngine = config.DATABASE_ENGINE || 'sqlite3';
     const dbPath = path.join(__dirname, '../data/bots.sqlite');
     
     // Ensure directory exists

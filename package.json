@@ -24,15 +24,25 @@
     "copyright": "Copyright © 2025",
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/favicon.svg"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "assets/favicon.svg"
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "category": "Development",
       "icon": "assets/favicon.svg"
     },
@@ -87,7 +97,7 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^8.6.0",
-    "sqlite3": "^5.1.6"
+    "sqlite3": "^5.1.7"
   },
   "engines": {
     "node": ">=16.0.0 <21.0.0"
