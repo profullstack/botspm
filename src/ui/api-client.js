@@ -1,7 +1,7 @@
 // api-client.js - Client for the bots.pm API server
 
-// Default API URL - can be overridden in .env or config
-const API_URL = process.env.API_URL || 'http://localhost:3000';
+// Default API URL - hardcoded for now
+const API_URL = 'http://localhost:3000';
 
 // Store the auth token
 let authToken = null;

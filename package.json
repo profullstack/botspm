@@ -11,6 +11,7 @@
     "dev:api": "nodemon src/api-server.js",
     "dev:web": "node src/web-server.js",
     "dev:all": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:complete": "concurrently \"npm run dev:api\" \"npm run dev\"",
     "setup": "bin/setup.sh",
     "test": "echo \"Error: no test specified\" && exit 1",
     "pack": "electron-builder --dir",

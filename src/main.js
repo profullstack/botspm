@@ -11,6 +11,9 @@ import Store from 'electron-store';
 import dotenv from 'dotenv';
 import { masterProcess } from './master.js';
 
+// Disable hardware acceleration to fix GL surface presentation errors
+app.disableHardwareAcceleration();
+
 // Load environment variables
 dotenv.config();
 
@@ -68,17 +71,71 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.cjs'), // Updated to use preload.cjs
+      // Add additional options to help with rendering issues
+      backgroundThrottling: false,
+      offscreen: false,
+      // Add this line to specify that the preload script is a module
+      sandbox: false
+    },
+    // Add additional window options
+    show: false, // Don't show until ready-to-show
+    backgroundColor: '#2e2c29', // Set a background color
+    useContentSize: true
+  });
+
+  // Wait until the window is ready to show
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  // Add event listeners for debugging
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    electronLog.error(`Failed to load: ${errorDescription} (${errorCode})`);
+    dialog.showErrorBox('Load Error', `Failed to load: ${errorDescription} (${errorCode})`);
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    electronLog.info('Page loaded successfully');
+  });
+
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    // Fix the console-message event handler
+    switch (level) {
+      case 0: // debug
+        electronLog.debug(`Console debug: ${message}`);
+        break;
+      case 1: // info
+        electronLog.info(`Console info: ${message}`);
+        break;
+      case 2: // warning
+        electronLog.warn(`Console warning: ${message}`);
+        break;
+      case 3: // error
+        electronLog.error(`Console error: ${message}`);
+        break;
+      default:
+        electronLog.info(`Console log: ${message}`);
     }
   });
 
   // Load the index.html file
-  mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
-
-  // Open DevTools in development mode
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
+  const htmlPath = path.join(__dirname, 'ui/index.html');
+  electronLog.info(`Loading HTML file from: ${htmlPath}`);
+  
+  // Check if the file exists
+  try {
+    const fileExists = readFileSync(htmlPath);
+    electronLog.info(`HTML file exists: ${fileExists.length} bytes`);
+  } catch (error) {
+    electronLog.error(`HTML file does not exist: ${error.message}`);
+    dialog.showErrorBox('File Error', `HTML file does not exist: ${error.message}`);
   }
+  
+  mainWindow.loadFile(htmlPath);
+
+  // Always open DevTools for debugging
+  mainWindow.webContents.openDevTools();
 
   // Save window size when resized
   mainWindow.on('resize', () => {
@@ -99,7 +156,7 @@ function createWindow() {
   try {
     createTray();
   } catch (error) {
-    electronLog.error('Failed to create tray:', error);
+    electronLog.error('Failed to create system tray:', error);
     // Continue without tray
   }
 }
