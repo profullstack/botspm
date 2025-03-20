@@ -15,6 +15,7 @@ let activeSession = null;
 let currentUser = null;
 let userSettings = null;
 let appState = 'login'; // 'login', 'setup', 'dashboard'
+let activePage = 'dashboard'; // 'dashboard', 'bots', 'sessions', 'director', 'logs', 'settings'
 
 // Custom events
 export const AppEvents = {
@@ -160,6 +161,46 @@ function setupCustomEventListeners() {
   window.addEventListener('bot-created', handleBotCreated);
   window.addEventListener('bot-updated', handleBotUpdated);
   window.addEventListener('edit-bot-personality', handleEditBotPersonality);
+  
+  // Listen for navigation events
+  window.addEventListener('nav-changed', handleNavChanged);
+}
+
+// Handle navigation change
+function handleNavChanged(event) {
+  const { page } = event.detail;
+  activePage = page;
+  
+  // Update UI based on the active page
+  updateActivePage();
+  
+  addLogEntry(`Navigated to ${page}`, 'info');
+}
+
+// Update active page in the UI
+function updateActivePage() {
+  // Hide all page content
+  const dashboardView = document.getElementById('dashboard-view');
+  const botsView = document.getElementById('bots-view');
+  const settingsView = document.getElementById('settings-view');
+  
+  if (dashboardView) dashboardView.style.display = 'none';
+  if (botsView) botsView.style.display = 'none';
+  if (settingsView) settingsView.style.display = 'none';
+  
+  // Show the active page content
+  switch (activePage) {
+    case 'dashboard':
+      if (dashboardView) dashboardView.style.display = 'block';
+      break;
+    case 'bots':
+      if (botsView) botsView.style.display = 'block';
+      break;
+    case 'settings':
+      if (settingsView) settingsView.style.display = 'block';
+      break;
+    // Add cases for other pages as needed
+  }
 }
 
 // Handle director command
@@ -356,6 +397,12 @@ function showDashboard() {
   appState = 'dashboard';
   updateAppState();
   loadUserBots();
+  
+  // Update navigation component with the current user
+  const navComponent = document.querySelector('navigation-component');
+  if (navComponent && currentUser) {
+    navComponent.updateUser(currentUser);
+  }
 }
 
 // Update app state
@@ -374,6 +421,11 @@ function updateAppState() {
   
   if (dashboardContainer) {
     dashboardContainer.style.display = appState === 'dashboard' ? 'block' : 'none';
+  }
+  
+  // If showing dashboard, also update the active page
+  if (appState === 'dashboard') {
+    updateActivePage();
   }
 }
 
