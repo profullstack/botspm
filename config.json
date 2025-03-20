@@ -1,5 +1,5 @@
 {
-  "DATABASE_PATH": "user-data/bots.sqlite",
+  "DATABASE_PATH": "data/bots.sqlite",
   "DATABASE_ENGINE": "sqlite3",
   "STATIC_BACKGROUND_PATH": "static_background.png",
   "LOG_LEVEL": "info",

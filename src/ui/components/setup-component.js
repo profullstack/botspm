@@ -1,28 +1,19 @@
-// setup-component.js - Setup web component for configuring environment variables
+// setup-component.js - Component for initial application setup
 
-import { saveUserSettings, getUserSettings } from '../app.js';
+import { saveUserSettings } from '../app.js';
 
 class SetupComponent extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.currentStep = 1;
+    this.totalSteps = 3;
     this.settings = {};
-    this.currentTab = 'api-keys';
   }
 
   connectedCallback() {
-    this.loadSettings();
     this.render();
     this.addEventListeners();
-  }
-
-  async loadSettings() {
-    try {
-      this.settings = await getUserSettings();
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-      this.settings = {};
-    }
   }
 
   render() {
@@ -31,71 +22,87 @@ class SetupComponent extends HTMLElement {
         :host {
           display: block;
           width: 100%;
-          height: 100%;
-          background-color: var(--background-color, #f8f9fa);
-          padding: 2rem;
-          box-sizing: border-box;
-          overflow-y: auto;
+          height: 100vh;
+          font-family: Arial, sans-serif;
         }
         
         .setup-container {
           max-width: 800px;
           margin: 0 auto;
+          padding: 2rem;
           background-color: var(--card-background, #ffffff);
-          border-radius: var(--border-radius-md, 0.5rem);
+          border-radius: var(--border-radius-lg, 0.5rem);
           box-shadow: 0 4px 6px var(--shadow-color, rgba(0, 0, 0, 0.1));
-          overflow: hidden;
         }
         
         .setup-header {
-          padding: 1.5rem;
-          background-color: var(--primary-color, #4a6cf7);
-          color: white;
+          text-align: center;
+          margin-bottom: 2rem;
         }
         
         .setup-header h1 {
-          margin: 0;
-          font-size: 1.5rem;
+          font-size: 2rem;
+          color: var(--primary-color, #4A6CF7);
+          margin-bottom: 0.5rem;
         }
         
         .setup-header p {
-          margin: 0.5rem 0 0 0;
-          opacity: 0.9;
+          color: var(--text-color-secondary, #6c757d);
+          font-size: 1rem;
         }
         
-        .setup-tabs {
+        .setup-progress {
           display: flex;
-          border-bottom: 1px solid var(--border-color, #dee2e6);
-          background-color: var(--background-color, #f8f9fa);
+          justify-content: space-between;
+          margin-bottom: 2rem;
+          position: relative;
         }
         
-        .setup-tab {
-          padding: 1rem 1.5rem;
-          cursor: pointer;
-          border-bottom: 2px solid transparent;
-          font-weight: 500;
-          color: var(--text-muted, #6c757d);
-          transition: all 0.2s;
+        .setup-progress::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background-color: var(--border-color, #e9ecef);
+          transform: translateY(-50%);
+          z-index: 1;
         }
         
-        .setup-tab:hover {
-          color: var(--text-color, #212529);
+        .progress-step {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background-color: var(--border-color, #e9ecef);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          color: var(--text-color, #333);
+          position: relative;
+          z-index: 2;
         }
         
-        .setup-tab.active {
-          color: var(--primary-color, #4a6cf7);
-          border-bottom-color: var(--primary-color, #4a6cf7);
+        .progress-step.active {
+          background-color: var(--primary-color, #4A6CF7);
+          color: white;
+        }
+        
+        .progress-step.completed {
+          background-color: var(--success-color, #28a745);
+          color: white;
         }
         
         .setup-content {
-          padding: 1.5rem;
+          margin-bottom: 2rem;
         }
         
-        .tab-panel {
+        .setup-step {
           display: none;
         }
         
-        .tab-panel.active {
+        .setup-step.active {
           display: block;
         }
         
@@ -106,224 +113,173 @@ class SetupComponent extends HTMLElement {
         .form-group label {
           display: block;
           margin-bottom: 0.5rem;
-          color: var(--text-color, #212529);
           font-weight: 500;
+          color: var(--text-color, #333);
         }
         
-        .form-group input {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
           width: 100%;
           padding: 0.75rem;
+          border: 1px solid var(--border-color, #ddd);
           border-radius: var(--border-radius-sm, 0.25rem);
-          border: 1px solid var(--border-color, #dee2e6);
-          background-color: var(--input-bg, #ffffff);
-          color: var(--text-color, #212529);
           font-size: 1rem;
-          transition: border-color 0.2s, box-shadow 0.2s;
+          background-color: var(--input-bg, #fff);
+          color: var(--text-color, #333);
         }
         
-        .form-group input:focus {
-          border-color: var(--primary-color, #4a6cf7);
-          box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-          outline: none;
+        .form-group textarea {
+          min-height: 100px;
+          resize: vertical;
         }
         
-        .form-group .help-text {
-          margin-top: 0.5rem;
+        .form-group .hint {
           font-size: 0.85rem;
-          color: var(--text-muted, #6c757d);
+          color: var(--text-color-secondary, #6c757d);
+          margin-top: 0.25rem;
         }
         
-        .form-actions {
+        .setup-actions {
           display: flex;
-          justify-content: flex-end;
-          gap: 1rem;
-          margin-top: 2rem;
-          padding-top: 1rem;
-          border-top: 1px solid var(--border-color, #dee2e6);
+          justify-content: space-between;
         }
         
-        .primary-button {
-          background-color: var(--primary-color, #4a6cf7);
-          color: white;
+        .btn {
+          padding: 0.75rem 1.5rem;
           border: none;
           border-radius: var(--border-radius-sm, 0.25rem);
-          padding: 0.75rem 1.5rem;
           font-size: 1rem;
           font-weight: 500;
           cursor: pointer;
-          transition: background-color 0.2s, transform 0.1s;
+          transition: background-color 0.2s;
         }
         
-        .primary-button:hover {
+        .btn-primary {
+          background-color: var(--primary-color, #4A6CF7);
+          color: white;
+        }
+        
+        .btn-primary:hover {
           background-color: var(--primary-color-hover, #3a5ce5);
         }
         
-        .primary-button:active {
-          transform: translateY(1px);
-        }
-        
-        .secondary-button {
+        .btn-secondary {
           background-color: var(--secondary-color, #6c757d);
           color: white;
-          border: none;
-          border-radius: var(--border-radius-sm, 0.25rem);
-          padding: 0.75rem 1.5rem;
-          font-size: 1rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s, transform 0.1s;
         }
         
-        .secondary-button:hover {
+        .btn-secondary:hover {
           background-color: var(--secondary-color-hover, #5a6268);
         }
         
-        .secondary-button:active {
-          transform: translateY(1px);
-        }
-        
-        .success-message {
+        .btn-success {
           background-color: var(--success-color, #28a745);
           color: white;
-          padding: 1rem;
-          border-radius: var(--border-radius-sm, 0.25rem);
-          margin-bottom: 1.5rem;
-          display: none;
         }
         
-        .success-message.show {
-          display: block;
+        .btn-success:hover {
+          background-color: var(--success-color-hover, #218838);
         }
         
-        .error-message {
-          background-color: var(--danger-color, #dc3545);
-          color: white;
-          padding: 1rem;
-          border-radius: var(--border-radius-sm, 0.25rem);
-          margin-bottom: 1.5rem;
-          display: none;
+        .btn-link {
+          background: none;
+          color: var(--primary-color, #4A6CF7);
+          text-decoration: underline;
+          padding: 0.75rem 0;
         }
         
-        .error-message.show {
-          display: block;
+        .btn-link:hover {
+          color: var(--primary-color-hover, #3a5ce5);
+        }
+        
+        .logo {
+          width: 120px;
+          height: auto;
+          margin-bottom: 1rem;
+        }
+        
+        /* Dark mode styles */
+        :host-context(body.dark-mode) .setup-container {
+          background-color: var(--dark-card-background, #2a2a2a);
+        }
+        
+        :host-context(body.dark-mode) .setup-header h1 {
+          color: var(--primary-color, #4A6CF7);
+        }
+        
+        :host-context(body.dark-mode) .setup-header p,
+        :host-context(body.dark-mode) .form-group .hint {
+          color: var(--dark-text-color-secondary, #adb5bd);
+        }
+        
+        :host-context(body.dark-mode) .form-group label {
+          color: var(--dark-text-color, #f8f9fa);
+        }
+        
+        :host-context(body.dark-mode) .form-group input,
+        :host-context(body.dark-mode) .form-group select,
+        :host-context(body.dark-mode) .form-group textarea {
+          background-color: var(--dark-input-bg, #343a40);
+          color: var(--dark-text-color, #f8f9fa);
+          border-color: var(--dark-border-color, #495057);
         }
       </style>
       
       <div class="setup-container">
         <div class="setup-header">
-          <h1>Application Setup</h1>
-          <p>Configure your environment settings</p>
+          <img src="../../assets/logo.svg" alt="bots.pm Logo" class="logo">
+          <h1>Welcome to bots.pm</h1>
+          <p>Let's set up your environment to get started</p>
         </div>
         
-        <div class="setup-tabs">
-          <div class="setup-tab ${this.currentTab === 'api-keys' ? 'active' : ''}" data-tab="api-keys">API Keys</div>
-          <div class="setup-tab ${this.currentTab === 'platforms' ? 'active' : ''}" data-tab="platforms">Platforms</div>
-          <div class="setup-tab ${this.currentTab === 'database' ? 'active' : ''}" data-tab="database">Database</div>
-          <div class="setup-tab ${this.currentTab === 'logging' ? 'active' : ''}" data-tab="logging">Logging</div>
+        <div class="setup-progress">
+          <div class="progress-step active" data-step="1">1</div>
+          <div class="progress-step" data-step="2">2</div>
+          <div class="progress-step" data-step="3">3</div>
         </div>
         
         <div class="setup-content">
-          <div id="successMessage" class="success-message">Settings saved successfully!</div>
-          <div id="errorMessage" class="error-message">Failed to save settings. Please try again.</div>
+          <!-- Step 1: Welcome -->
+          <div class="setup-step active" data-step="1">
+            <h2>Welcome to bots.pm</h2>
+            <p>bots.pm is a desktop application for managing multiple AI bots across streaming platforms like YouTube, TikTok, and X.com.</p>
+            <p>This setup wizard will help you configure the basic settings needed to get started. You can always change these settings later.</p>
+            <p>Let's begin by setting up your API keys for the AI services.</p>
+          </div>
           
-          <!-- API Keys Tab -->
-          <div class="tab-panel ${this.currentTab === 'api-keys' ? 'active' : ''}" data-tab="api-keys">
+          <!-- Step 2: API Keys -->
+          <div class="setup-step" data-step="2">
+            <h2>API Keys</h2>
+            <p>bots.pm uses various AI services to power the bots. Please enter your API keys below:</p>
+            
             <div class="form-group">
               <label for="openaiApiKey">OpenAI API Key</label>
-              <input type="password" id="openaiApiKey" placeholder="Enter your OpenAI API key" value="${this.settings.OPENAI_API_KEY || ''}">
-              <div class="help-text">Required for generating bot responses using GPT models.</div>
+              <input type="password" id="openaiApiKey" placeholder="sk-...">
+              <div class="hint">Used for generating bot responses with GPT models</div>
             </div>
             
             <div class="form-group">
-              <label for="twoCaptchaApiKey">2Captcha API Key</label>
-              <input type="password" id="twoCaptchaApiKey" placeholder="Enter your 2Captcha API key" value="${this.settings.TWO_CAPTCHA_API_KEY || ''}">
-              <div class="help-text">Required for solving CAPTCHAs during platform authentication.</div>
+              <label for="twoCaptchaApiKey">2Captcha API Key (Optional)</label>
+              <input type="password" id="twoCaptchaApiKey" placeholder="Your 2Captcha API key">
+              <div class="hint">Used for solving CAPTCHAs during automated platform authentication</div>
             </div>
           </div>
           
-          <!-- Platforms Tab -->
-          <div class="tab-panel ${this.currentTab === 'platforms' ? 'active' : ''}" data-tab="platforms">
-            <h3>TikTok</h3>
-            <div class="form-group">
-              <label for="tiktokUsername">TikTok Username</label>
-              <input type="text" id="tiktokUsername" placeholder="Enter your TikTok username" value="${this.settings.TIKTOK_USERNAME || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label for="tiktokPassword">TikTok Password</label>
-              <input type="password" id="tiktokPassword" placeholder="Enter your TikTok password" value="${this.settings.TIKTOK_PASSWORD || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label for="tiktokStreamKey">TikTok Stream Key</label>
-              <input type="password" id="tiktokStreamKey" placeholder="Enter your TikTok stream key" value="${this.settings.TIKTOK_STREAM_KEY || ''}">
-            </div>
-            
-            <h3>YouTube</h3>
-            <div class="form-group">
-              <label for="youtubeEmail">YouTube Email</label>
-              <input type="text" id="youtubeEmail" placeholder="Enter your YouTube email" value="${this.settings.YOUTUBE_EMAIL || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label for="youtubePassword">YouTube Password</label>
-              <input type="password" id="youtubePassword" placeholder="Enter your YouTube password" value="${this.settings.YOUTUBE_PASSWORD || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label for="youtubeStreamKey">YouTube Stream Key</label>
-              <input type="password" id="youtubeStreamKey" placeholder="Enter your YouTube stream key" value="${this.settings.YOUTUBE_STREAM_KEY || ''}">
-            </div>
-            
-            <h3>X.com (Twitter)</h3>
-            <div class="form-group">
-              <label for="xcomUsername">X.com Username</label>
-              <input type="text" id="xcomUsername" placeholder="Enter your X.com username" value="${this.settings.XCOM_USERNAME || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label for="xcomPassword">X.com Password</label>
-              <input type="password" id="xcomPassword" placeholder="Enter your X.com password" value="${this.settings.XCOM_PASSWORD || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label for="xcomStreamKey">X.com Stream Key</label>
-              <input type="password" id="xcomStreamKey" placeholder="Enter your X.com stream key" value="${this.settings.XCOM_STREAM_KEY || ''}">
-            </div>
+          <!-- Step 3: Completion -->
+          <div class="setup-step" data-step="3">
+            <h2>Setup Complete!</h2>
+            <p>Congratulations! You've completed the basic setup for bots.pm.</p>
+            <p>You can now start creating and managing your AI bots across multiple streaming platforms.</p>
+            <p>Additional settings can be configured in the Settings panel after you enter the dashboard.</p>
           </div>
-          
-          <!-- Database Tab -->
-          <div class="tab-panel ${this.currentTab === 'database' ? 'active' : ''}" data-tab="database">
-            <div class="form-group">
-              <label for="dbPath">Database Path</label>
-              <input type="text" id="dbPath" placeholder="Enter database path" value="${this.settings.DB_PATH || 'user-data/bots.sqlite'}">
-              <div class="help-text">Path where the SQLite database will be stored.</div>
-            </div>
-          </div>
-          
-          <!-- Logging Tab -->
-          <div class="tab-panel ${this.currentTab === 'logging' ? 'active' : ''}" data-tab="logging">
-            <div class="form-group">
-              <label for="logLevel">Log Level</label>
-              <select id="logLevel">
-                <option value="debug" ${this.settings.LOG_LEVEL === 'debug' ? 'selected' : ''}>Debug</option>
-                <option value="info" ${this.settings.LOG_LEVEL === 'info' || !this.settings.LOG_LEVEL ? 'selected' : ''}>Info</option>
-                <option value="warn" ${this.settings.LOG_LEVEL === 'warn' ? 'selected' : ''}>Warning</option>
-                <option value="error" ${this.settings.LOG_LEVEL === 'error' ? 'selected' : ''}>Error</option>
-              </select>
-              <div class="help-text">Controls the verbosity of application logs.</div>
-            </div>
-            
-            <div class="form-group">
-              <label for="logFile">Log File</label>
-              <input type="text" id="logFile" placeholder="Enter log file path" value="${this.settings.LOG_FILE || 'user-data/logs/app.log'}">
-              <div class="help-text">Path where log files will be stored.</div>
-            </div>
-          </div>
-          
-          <div class="form-actions">
-            <button id="saveSettingsBtn" class="primary-button">Save Settings</button>
-            <button id="skipSetupBtn" class="secondary-button">Skip Setup</button>
+        </div>
+        
+        <div class="setup-actions">
+          <button id="prevBtn" class="btn btn-secondary" style="display: none;">Previous</button>
+          <div>
+            <button id="skipBtn" class="btn btn-link">Skip Setup</button>
+            <button id="nextBtn" class="btn btn-primary">Next</button>
           </div>
         </div>
       </div>
@@ -331,123 +287,140 @@ class SetupComponent extends HTMLElement {
   }
 
   addEventListeners() {
-    // Tab switching
-    const tabs = this.shadowRoot.querySelectorAll('.setup-tab');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const tabName = tab.getAttribute('data-tab');
-        this.switchTab(tabName);
-      });
-    });
+    const nextBtn = this.shadowRoot.getElementById('nextBtn');
+    const prevBtn = this.shadowRoot.getElementById('prevBtn');
+    const skipBtn = this.shadowRoot.getElementById('skipBtn');
     
-    // Save settings
-    const saveSettingsBtn = this.shadowRoot.getElementById('saveSettingsBtn');
-    saveSettingsBtn.addEventListener('click', () => this.saveSettings());
-    
-    // Skip setup
-    const skipSetupBtn = this.shadowRoot.getElementById('skipSetupBtn');
-    skipSetupBtn.addEventListener('click', () => this.skipSetup());
+    nextBtn.addEventListener('click', () => this.nextStep());
+    prevBtn.addEventListener('click', () => this.prevStep());
+    skipBtn.addEventListener('click', () => this.skipSetup());
   }
 
-  switchTab(tabName) {
-    this.currentTab = tabName;
+  nextStep() {
+    // Save current step data
+    this.saveStepData();
     
-    // Update tab active state
-    const tabs = this.shadowRoot.querySelectorAll('.setup-tab');
-    tabs.forEach(tab => {
-      if (tab.getAttribute('data-tab') === tabName) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
-    });
+    // If on last step, complete setup
+    if (this.currentStep === this.totalSteps) {
+      this.completeSetup();
+      return;
+    }
     
-    // Update panel visibility
-    const panels = this.shadowRoot.querySelectorAll('.tab-panel');
-    panels.forEach(panel => {
-      if (panel.getAttribute('data-tab') === tabName) {
-        panel.classList.add('active');
-      } else {
-        panel.classList.remove('active');
-      }
-    });
+    // Update progress
+    const currentStepEl = this.shadowRoot.querySelector(`.progress-step[data-step="${this.currentStep}"]`);
+    currentStepEl.classList.remove('active');
+    currentStepEl.classList.add('completed');
+    
+    // Hide current step
+    const currentContentEl = this.shadowRoot.querySelector(`.setup-step[data-step="${this.currentStep}"]`);
+    currentContentEl.classList.remove('active');
+    
+    // Increment step
+    this.currentStep++;
+    
+    // Show next step
+    const nextStepEl = this.shadowRoot.querySelector(`.progress-step[data-step="${this.currentStep}"]`);
+    nextStepEl.classList.add('active');
+    
+    const nextContentEl = this.shadowRoot.querySelector(`.setup-step[data-step="${this.currentStep}"]`);
+    nextContentEl.classList.add('active');
+    
+    // Update buttons
+    const prevBtn = this.shadowRoot.getElementById('prevBtn');
+    const nextBtn = this.shadowRoot.getElementById('nextBtn');
+    const skipBtn = this.shadowRoot.getElementById('skipBtn');
+    
+    prevBtn.style.display = 'block';
+    
+    if (this.currentStep === this.totalSteps) {
+      nextBtn.textContent = 'Complete Setup';
+      nextBtn.classList.remove('btn-primary');
+      nextBtn.classList.add('btn-success');
+      skipBtn.style.display = 'none';
+    }
   }
 
-  async saveSettings() {
+  prevStep() {
+    // Update progress
+    const currentStepEl = this.shadowRoot.querySelector(`.progress-step[data-step="${this.currentStep}"]`);
+    currentStepEl.classList.remove('active');
+    
+    // Hide current step
+    const currentContentEl = this.shadowRoot.querySelector(`.setup-step[data-step="${this.currentStep}"]`);
+    currentContentEl.classList.remove('active');
+    
+    // Decrement step
+    this.currentStep--;
+    
+    // Show previous step
+    const prevStepEl = this.shadowRoot.querySelector(`.progress-step[data-step="${this.currentStep}"]`);
+    prevStepEl.classList.remove('completed');
+    prevStepEl.classList.add('active');
+    
+    const prevContentEl = this.shadowRoot.querySelector(`.setup-step[data-step="${this.currentStep}"]`);
+    prevContentEl.classList.add('active');
+    
+    // Update buttons
+    const prevBtn = this.shadowRoot.getElementById('prevBtn');
+    const nextBtn = this.shadowRoot.getElementById('nextBtn');
+    const skipBtn = this.shadowRoot.getElementById('skipBtn');
+    
+    if (this.currentStep === 1) {
+      prevBtn.style.display = 'none';
+    }
+    
+    if (this.currentStep < this.totalSteps) {
+      nextBtn.textContent = 'Next';
+      nextBtn.classList.add('btn-primary');
+      nextBtn.classList.remove('btn-success');
+      skipBtn.style.display = 'block';
+    }
+  }
+
+  saveStepData() {
+    switch (this.currentStep) {
+      case 1:
+        // No data to save in step 1
+        break;
+      case 2:
+        // Save API keys
+        const openaiApiKey = this.shadowRoot.getElementById('openaiApiKey').value;
+        const twoCaptchaApiKey = this.shadowRoot.getElementById('twoCaptchaApiKey').value;
+        
+        if (openaiApiKey) {
+          this.settings.OPENAI_API_KEY = openaiApiKey;
+        }
+        
+        if (twoCaptchaApiKey) {
+          this.settings.TWO_CAPTCHA_API_KEY = twoCaptchaApiKey;
+        }
+        break;
+      case 3:
+        // No data to save in step 3
+        break;
+    }
+  }
+
+  async completeSetup() {
+    // Save all settings to user settings
     try {
-      // Collect settings from all tabs
-      const settings = {
-        // API Keys
-        OPENAI_API_KEY: this.shadowRoot.getElementById('openaiApiKey').value,
-        TWO_CAPTCHA_API_KEY: this.shadowRoot.getElementById('twoCaptchaApiKey').value,
-        
-        // Platforms - TikTok
-        TIKTOK_USERNAME: this.shadowRoot.getElementById('tiktokUsername').value,
-        TIKTOK_PASSWORD: this.shadowRoot.getElementById('tiktokPassword').value,
-        TIKTOK_STREAM_KEY: this.shadowRoot.getElementById('tiktokStreamKey').value,
-        
-        // Platforms - YouTube
-        YOUTUBE_EMAIL: this.shadowRoot.getElementById('youtubeEmail').value,
-        YOUTUBE_PASSWORD: this.shadowRoot.getElementById('youtubePassword').value,
-        YOUTUBE_STREAM_KEY: this.shadowRoot.getElementById('youtubeStreamKey').value,
-        
-        // Platforms - X.com
-        XCOM_USERNAME: this.shadowRoot.getElementById('xcomUsername').value,
-        XCOM_PASSWORD: this.shadowRoot.getElementById('xcomPassword').value,
-        XCOM_STREAM_KEY: this.shadowRoot.getElementById('xcomStreamKey').value,
-        
-        // Database
-        DB_PATH: this.shadowRoot.getElementById('dbPath').value,
-        
-        // Logging
-        LOG_LEVEL: this.shadowRoot.getElementById('logLevel').value,
-        LOG_FILE: this.shadowRoot.getElementById('logFile').value
-      };
-      
-      // Save settings
-      const success = await saveUserSettings(settings);
-      
-      if (success) {
-        // Show success message
-        const successMessage = this.shadowRoot.getElementById('successMessage');
-        successMessage.classList.add('show');
-        
-        // Hide error message if visible
-        const errorMessage = this.shadowRoot.getElementById('errorMessage');
-        errorMessage.classList.remove('show');
-        
-        // Hide success message after 3 seconds
-        setTimeout(() => {
-          successMessage.classList.remove('show');
-        }, 3000);
-        
-        // Update local settings
-        this.settings = settings;
-        
-        // Notify app that setup is complete
-        this.dispatchEvent(new CustomEvent('setup-complete', {
-          bubbles: true,
-          composed: true
-        }));
-      } else {
-        throw new Error('Failed to save settings');
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        await saveUserSettings(userId, this.settings);
       }
+      
+      // Dispatch setup complete event
+      this.dispatchEvent(new CustomEvent('setup-complete', {
+        bubbles: true,
+        composed: true
+      }));
     } catch (error) {
-      console.error('Error saving settings:', error);
-      
-      // Show error message
-      const errorMessage = this.shadowRoot.getElementById('errorMessage');
-      errorMessage.textContent = `Failed to save settings: ${error.message}`;
-      errorMessage.classList.add('show');
-      
-      // Hide success message if visible
-      const successMessage = this.shadowRoot.getElementById('successMessage');
-      successMessage.classList.remove('show');
+      console.error('Failed to save settings:', error);
     }
   }
 
   skipSetup() {
-    // Notify app that setup is skipped
+    // Dispatch setup skipped event
     this.dispatchEvent(new CustomEvent('setup-skipped', {
       bubbles: true,
       composed: true

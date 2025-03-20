@@ -1,6 +1,6 @@
-// main.js - Electron main process for Multi-Platform AI Bots desktop application
+// main.js - Electron main process for bots.pm desktop application
 
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, Tray } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
@@ -37,6 +37,7 @@ const store = new Store({
 
 // Global reference to mainWindow to prevent garbage collection
 let mainWindow;
+let tray = null;
 let botProcesses = [];
 let db;
 
@@ -57,7 +58,7 @@ async function initDatabase() {
     }
     
     const dbEngine = config.DATABASE_ENGINE || 'better-sqlite3';
-    const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
+    const dbPath = path.join(__dirname, '../data/bots.sqlite');
     
     // Ensure directory exists
     await fs.mkdir(path.dirname(dbPath), { recursive: true });
@@ -235,8 +236,8 @@ function createWindow() {
     height,
     minWidth: 800,
     minHeight: 600,
-    title: 'Multi-Platform AI Bots',
-    icon: path.join(__dirname, '../assets/icons/png/64x64.png'),
+    title: 'bots.pm',
+    icon: path.join(__dirname, '../assets/favicon.svg'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -266,6 +267,9 @@ function createWindow() {
 
   // Create application menu
   createMenu();
+  
+  // Create system tray
+  createTray();
 }
 
 /**
@@ -340,11 +344,11 @@ function createMenu() {
           label: 'About',
           click: () => {
             dialog.showMessageBox(mainWindow, {
-              title: 'About Multi-Platform AI Bots',
-              message: 'Multi-Platform AI Bots',
+              title: 'About bots.pm',
+              message: 'bots.pm',
               detail: `Version: ${app.getVersion()}\nElectron: ${process.versions.electron}\nChrome: ${process.versions.chrome}\nNode.js: ${process.versions.node}\nV8: ${process.versions.v8}`,
               buttons: ['OK'],
-              icon: path.join(__dirname, '../assets/icons/png/64x64.png')
+              icon: path.join(__dirname, '../assets/favicon.svg')
             });
           }
         }
@@ -354,6 +358,57 @@ function createMenu() {
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+}
+
+/**
+ * Creates the system tray icon
+ */
+function createTray() {
+  const iconPath = path.join(__dirname, '../assets/favicon.svg');
+  tray = new Tray(iconPath);
+  
+  const contextMenu = Menu.buildFromTemplate([
+    { 
+      label: 'Open bots.pm', 
+      click: () => {
+        if (mainWindow === null) {
+          createWindow();
+        } else {
+          mainWindow.show();
+        }
+      }
+    },
+    { 
+      label: 'Start All Bots', 
+      click: startAllBots 
+    },
+    { 
+      label: 'Stop All Bots', 
+      click: stopAllBots 
+    },
+    { type: 'separator' },
+    { 
+      label: 'Quit', 
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  
+  tray.setToolTip('bots.pm');
+  tray.setContextMenu(contextMenu);
+  
+  tray.on('click', () => {
+    if (mainWindow === null) {
+      createWindow();
+    } else {
+      if (mainWindow.isVisible()) {
+        mainWindow.focus();
+      } else {
+        mainWindow.show();
+      }
+    }
+  });
 }
 
 /**
@@ -378,7 +433,15 @@ async function startAllBots() {
     const masterInstance = await masterProcess(config);
     botProcesses.push(masterInstance);
     
-    mainWindow.webContents.send('bots-started');
+    if (mainWindow) {
+      mainWindow.webContents.send('bots-started');
+    }
+    
+    // Update tray icon tooltip
+    if (tray) {
+      tray.setToolTip('bots.pm - Bots Running');
+    }
+    
     electronLog.info('All bots started successfully');
   } catch (error) {
     electronLog.error('Failed to start bots:', error);
@@ -398,6 +461,11 @@ function stopAllBots() {
   
   botProcesses = [];
   electronLog.info('All bots stopped');
+  
+  // Update tray icon tooltip
+  if (tray) {
+    tray.setToolTip('bots.pm');
+  }
   
   if (mainWindow) {
     mainWindow.webContents.send('bots-stopped');

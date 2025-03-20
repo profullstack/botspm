@@ -35,9 +35,9 @@ async function loadConfig(providedConfig = null) {
   } catch (error) {
     // If config file doesn't exist, create it with default values
     const defaultConfig = {
-      DATABASE_PATH: path.join(app.getPath('userData'), 'bots.sqlite'),
+      DATABASE_PATH: path.join(__dirname, '../data/bots.sqlite'),
       DATABASE_ENGINE: 'better-sqlite3',
-      STATIC_BACKGROUND_PATH: path.join(app.getPath('userData'), 'static_background.png'),
+      STATIC_BACKGROUND_PATH: path.join(__dirname, '../static_background.png'),
       LOG_LEVEL: 'info',
       PLATFORMS: [
         {
@@ -90,7 +90,7 @@ const createLogger = (config) => {
     transports: [
       new winston.transports.Console(),
       new winston.transports.File({ 
-        filename: path.join(app.getPath('userData'), 'bots.log')
+        filename: path.join(app.getPath('userData'), 'logs/bots.log')
       })
     ]
   });
@@ -769,8 +769,14 @@ export async function masterProcess(providedConfig = null) {
     const dbEngine = config.DATABASE_ENGINE || 'better-sqlite3';
     logger.info(`Using ${dbEngine} database engine`);
     
+    // Resolve database path
+    let dbPath = config.DATABASE_PATH;
+    if (!path.isAbsolute(dbPath)) {
+      dbPath = path.join(__dirname, '..', dbPath);
+    }
+    
     // Setup database
-    const db = await setupDatabase(config.DATABASE_PATH, [], logger, dbEngine);
+    const db = await setupDatabase(dbPath, [], logger, dbEngine);
     
     // Get bots from database instead of config
     const botsFromDb = await getAllBots(db, logger, dbEngine);

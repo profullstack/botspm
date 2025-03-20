@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Platform AI Bots</title>
+  <title>bots.pm</title>
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../../public/styles/main.css">
 </head>
 <body>
@@ -15,6 +16,9 @@
   
   <!-- Dashboard -->
   <div class="dashboard-container" style="display: none;">
+    <!-- Navigation Component -->
+    <navigation-component></navigation-component>
+    
     <div class="app-container">
       <header-component></header-component>
       
@@ -39,6 +43,7 @@
   <!-- Import web components -->
   <script type="module" src="components/login-component.js"></script>
   <script type="module" src="components/setup-component.js"></script>
+  <script type="module" src="components/navigation-component.js"></script>
   <script type="module" src="components/header-component.js"></script>
   <script type="module" src="components/control-panel-component.js"></script>
   <script type="module" src="components/bots-panel-component.js"></script>

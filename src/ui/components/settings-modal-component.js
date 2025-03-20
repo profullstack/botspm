@@ -1,204 +1,25 @@
-// settings-modal-component.js - Settings modal web component
+// settings-modal-component.js - Component for application settings
 
-import { getConfig, saveSettings, toggleDarkMode, AppEvents } from '../app.js';
+import { saveUserSettings, getUserSettings } from '../app.js';
 
 class SettingsModalComponent extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this.isOpen = false;
-    this.config = null;
+    this.activeTab = 'general';
+    this.settings = {};
   }
 
   connectedCallback() {
     this.render();
     this.addEventListeners();
-    
-    // Listen for config loaded event
-    window.addEventListener(AppEvents.CONFIG_LOADED, this.handleConfigLoaded.bind(this));
-    window.addEventListener(AppEvents.DARK_MODE_CHANGED, this.handleDarkModeChanged.bind(this));
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener(AppEvents.CONFIG_LOADED, this.handleConfigLoaded.bind(this));
-    window.removeEventListener(AppEvents.DARK_MODE_CHANGED, this.handleDarkModeChanged.bind(this));
-  }
-
-  handleConfigLoaded(event) {
-    this.config = event.detail.config;
-    this.updateSettingsUI();
-  }
-
-  handleDarkModeChanged(event) {
-    const darkModeToggle = this.shadowRoot.getElementById('darkModeToggle');
-    if (darkModeToggle) {
-      darkModeToggle.checked = event.detail.darkMode;
-    }
-  }
-
-  open() {
-    this.isOpen = true;
-    this.config = getConfig();
-    this.updateSettingsUI();
-    this.updateModalVisibility();
-  }
-
-  close() {
-    this.isOpen = false;
-    this.updateModalVisibility();
-  }
-
-  updateModalVisibility() {
-    const modal = this.shadowRoot.querySelector('.modal');
-    if (modal) {
-      if (this.isOpen) {
-        modal.classList.add('show');
-      } else {
-        modal.classList.remove('show');
-      }
-    }
-  }
-
-  updateSettingsUI() {
-    if (!this.config) return;
-    
-    // Update log level select
-    const logLevelSelect = this.shadowRoot.getElementById('logLevelSelect');
-    if (logLevelSelect) {
-      logLevelSelect.value = this.config.LOG_LEVEL || 'info';
-    }
-    
-    // Update API key fields
-    const twoCaptchaApiKey = this.shadowRoot.getElementById('twoCaptchaApiKey');
-    const openaiApiKey = this.shadowRoot.getElementById('openaiApiKey');
-    
-    if (twoCaptchaApiKey) {
-      twoCaptchaApiKey.value = localStorage.getItem('twoCaptchaApiKey') || '';
-    }
-    
-    if (openaiApiKey) {
-      openaiApiKey.value = localStorage.getItem('openaiApiKey') || '';
-    }
-    
-    // Update bot personalities list
-    this.updateBotPersonalitiesList();
-    
-    // Update platforms list
-    this.updatePlatformsList();
-  }
-
-  updateBotPersonalitiesList() {
-    const botPersonalitiesList = this.shadowRoot.getElementById('botPersonalitiesList');
-    if (!botPersonalitiesList || !this.config || !this.config.BOT_PERSONALITIES) return;
-    
-    botPersonalitiesList.innerHTML = '';
-    
-    if (this.config.BOT_PERSONALITIES.length === 0) {
-      botPersonalitiesList.innerHTML = '<p>No personalities configured</p>';
-      return;
-    }
-    
-    this.config.BOT_PERSONALITIES.forEach((personality, index) => {
-      const personalityItem = document.createElement('div');
-      personalityItem.className = 'setting-item';
-      personalityItem.innerHTML = `
-        <span>${personality.persona} (${personality.gender})</span>
-        <div>
-          <button class="icon-button edit-personality" data-index="${index}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
-          <button class="icon-button delete-personality" data-index="${index}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </button>
-        </div>
-      `;
-      botPersonalitiesList.appendChild(personalityItem);
-    });
-    
-    // Add event listeners for edit and delete buttons
-    this.shadowRoot.querySelectorAll('.edit-personality').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const index = parseInt(e.currentTarget.getAttribute('data-index'));
-        this.editPersonality(index);
-      });
-    });
-    
-    this.shadowRoot.querySelectorAll('.delete-personality').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const index = parseInt(e.currentTarget.getAttribute('data-index'));
-        this.deletePersonality(index);
-      });
-    });
-  }
-
-  updatePlatformsList() {
-    const platformsList = this.shadowRoot.getElementById('platformsList');
-    if (!platformsList || !this.config || !this.config.PLATFORMS) return;
-    
-    platformsList.innerHTML = '';
-    
-    if (this.config.PLATFORMS.length === 0) {
-      platformsList.innerHTML = '<p>No platforms configured</p>';
-      return;
-    }
-    
-    this.config.PLATFORMS.forEach((platform, index) => {
-      const platformItem = document.createElement('div');
-      platformItem.className = 'setting-item';
-      platformItem.innerHTML = `
-        <span>${platform.name}</span>
-        <div>
-          <button class="icon-button edit-platform" data-index="${index}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
-          <button class="icon-button delete-platform" data-index="${index}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </button>
-        </div>
-      `;
-      platformsList.appendChild(platformItem);
-    });
-    
-    // Add event listeners for edit and delete buttons
-    this.shadowRoot.querySelectorAll('.edit-platform').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const index = parseInt(e.currentTarget.getAttribute('data-index'));
-        this.editPlatform(index);
-      });
-    });
-    
-    this.shadowRoot.querySelectorAll('.delete-platform').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const index = parseInt(e.currentTarget.getAttribute('data-index'));
-        this.deletePlatform(index);
-      });
-    });
   }
 
   render() {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
-        }
-        
-        .modal {
           display: none;
           position: fixed;
           top: 0;
@@ -209,381 +30,719 @@ class SettingsModalComponent extends HTMLElement {
           z-index: 1000;
           justify-content: center;
           align-items: center;
+          font-family: Arial, sans-serif;
         }
         
-        .modal.show {
+        :host(.open) {
           display: flex;
         }
         
-        .modal-content {
-          background-color: var(--modal-bg, #ffffff);
-          border-radius: 0.5rem;
-          width: 80%;
-          max-width: 800px;
+        .modal {
+          background-color: var(--card-background, #ffffff);
+          border-radius: var(--border-radius-lg, 0.5rem);
+          box-shadow: 0 4px 6px var(--shadow-color, rgba(0, 0, 0, 0.1));
+          width: 800px;
+          max-width: 90%;
           max-height: 90vh;
-          box-shadow: 0 4px 8px var(--shadow-color, rgba(0, 0, 0, 0.1));
           display: flex;
           flex-direction: column;
           overflow: hidden;
         }
         
         .modal-header {
-          padding: 1rem;
+          padding: 1.5rem;
+          border-bottom: 1px solid var(--border-color, #e9ecef);
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 1px solid var(--border-color, #dee2e6);
+        }
+        
+        .modal-header h2 {
+          margin: 0;
+          font-size: 1.5rem;
+          color: var(--text-color, #333);
+        }
+        
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          cursor: pointer;
+          color: var(--text-color-secondary, #6c757d);
         }
         
         .modal-body {
-          padding: 1rem;
-          overflow-y: auto;
-          max-height: 70vh;
-        }
-        
-        .modal-footer {
-          padding: 1rem;
-          display: flex;
-          justify-content: flex-end;
-          gap: 0.5rem;
-          border-top: 1px solid var(--border-color, #dee2e6);
-        }
-        
-        h2, h3, h4 {
-          margin: 0;
-          color: var(--text-color, #212529);
-        }
-        
-        .close-button {
-          background-color: transparent;
-          color: var(--text-color, #212529);
-          font-size: 1.5rem;
           padding: 0;
-          width: 30px;
-          height: 30px;
-          border: none;
-          cursor: pointer;
+          overflow: hidden;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          height: 500px;
         }
         
-        .settings-section {
+        .tabs {
+          width: 200px;
+          background-color: var(--sidebar-bg, #f8f9fa);
+          border-right: 1px solid var(--border-color, #e9ecef);
+          padding: 1rem 0;
+          overflow-y: auto;
+        }
+        
+        .tab-item {
+          padding: 0.75rem 1.5rem;
+          cursor: pointer;
+          color: var(--text-color-secondary, #6c757d);
+          transition: all 0.2s ease;
+          border-left: 3px solid transparent;
+        }
+        
+        .tab-item:hover {
+          background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+          color: var(--text-color, #333);
+        }
+        
+        .tab-item.active {
+          background-color: var(--active-bg, rgba(74, 108, 247, 0.1));
+          color: var(--primary-color, #4A6CF7);
+          border-left-color: var(--primary-color, #4A6CF7);
+          font-weight: 500;
+        }
+        
+        .tab-content {
+          flex: 1;
+          padding: 1.5rem;
+          overflow-y: auto;
+        }
+        
+        .tab-pane {
+          display: none;
+        }
+        
+        .tab-pane.active {
+          display: block;
+        }
+        
+        .form-group {
           margin-bottom: 1.5rem;
         }
         
-        .settings-section h3 {
+        .form-group label {
+          display: block;
           margin-bottom: 0.5rem;
-          padding-bottom: 0.25rem;
-          border-bottom: 1px solid var(--border-color, #dee2e6);
+          font-weight: 500;
+          color: var(--text-color, #333);
         }
         
-        .setting-item {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--border-color, #ddd);
+          border-radius: var(--border-radius-sm, 0.25rem);
+          font-size: 1rem;
+          background-color: var(--input-bg, #fff);
+          color: var(--text-color, #333);
+        }
+        
+        .form-group textarea {
+          min-height: 100px;
+          resize: vertical;
+        }
+        
+        .form-group .hint {
+          font-size: 0.85rem;
+          color: var(--text-color-secondary, #6c757d);
+          margin-top: 0.25rem;
+        }
+        
+        .form-row {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.75rem;
-          padding: 0.5rem;
-          border-radius: 0.25rem;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
         }
         
-        .setting-item:hover {
-          background-color: var(--background-color, #f8f9fa);
+        .form-row .form-group {
+          flex: 1;
+          margin-bottom: 0;
         }
         
-        .setting-item input[type="text"],
-        .setting-item input[type="password"],
-        .setting-item select {
-          padding: 0.5rem;
-          border-radius: 0.25rem;
-          border: 1px solid var(--input-border, #ced4da);
-          background-color: var(--input-bg, #ffffff);
-          color: var(--text-color, #212529);
-          width: 60%;
+        .section-title {
+          font-size: 1.2rem;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid var(--border-color, #e9ecef);
+          color: var(--text-color, #333);
         }
         
-        .switch {
-          position: relative;
-          display: inline-block;
-          width: 50px;
-          height: 24px;
+        .section-title:first-child {
+          margin-top: 0;
         }
         
-        .switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
+        .modal-footer {
+          padding: 1.5rem;
+          border-top: 1px solid var(--border-color, #e9ecef);
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.75rem;
         }
         
-        .slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: var(--secondary-color, #6c757d);
-          transition: .4s;
-        }
-        
-        .slider:before {
-          position: absolute;
-          content: "";
-          height: 16px;
-          width: 16px;
-          left: 4px;
-          bottom: 4px;
-          background-color: white;
-          transition: .4s;
-        }
-        
-        input:checked + .slider {
-          background-color: var(--primary-color, #4a6cf7);
-        }
-        
-        input:checked + .slider:before {
-          transform: translateX(26px);
-        }
-        
-        .slider.round {
-          border-radius: 24px;
-        }
-        
-        .slider.round:before {
-          border-radius: 50%;
-        }
-        
-        button {
-          cursor: pointer;
+        .btn {
+          padding: 0.75rem 1.5rem;
           border: none;
-          border-radius: 0.25rem;
-          padding: 0.5rem 1rem;
-          font-size: 0.9rem;
-          transition: background-color 0.2s, transform 0.1s;
+          border-radius: var(--border-radius-sm, 0.25rem);
+          font-size: 1rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
         }
         
-        button:active {
-          transform: translateY(1px);
-        }
-        
-        .primary-button {
-          background-color: var(--primary-color, #4a6cf7);
+        .btn-primary {
+          background-color: var(--primary-color, #4A6CF7);
           color: white;
         }
         
-        .primary-button:hover {
-          filter: brightness(1.1);
+        .btn-primary:hover {
+          background-color: var(--primary-color-hover, #3a5ce5);
         }
         
-        .secondary-button {
+        .btn-secondary {
           background-color: var(--secondary-color, #6c757d);
           color: white;
         }
         
-        .secondary-button:hover {
-          filter: brightness(1.1);
+        .btn-secondary:hover {
+          background-color: var(--secondary-color-hover, #5a6268);
         }
         
-        .icon-button {
-          background-color: transparent;
-          color: var(--text-color, #212529);
-          padding: 0.25rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        .success-message,
+        .error-message {
+          padding: 0.75rem;
+          border-radius: var(--border-radius-sm, 0.25rem);
+          margin-bottom: 1rem;
+          display: none;
         }
         
-        .icon-button:hover {
-          background-color: var(--border-color, #dee2e6);
+        .success-message {
+          background-color: var(--success-color, #28a745);
+          color: white;
+        }
+        
+        .error-message {
+          background-color: var(--danger-color, #dc3545);
+          color: white;
+        }
+        
+        .success-message.show,
+        .error-message.show {
+          display: block;
+        }
+        
+        /* Dark mode styles */
+        :host-context(body.dark-mode) .modal {
+          background-color: var(--dark-card-background, #2a2a2a);
+        }
+        
+        :host-context(body.dark-mode) .modal-header {
+          border-bottom-color: var(--dark-border-color, #444);
+        }
+        
+        :host-context(body.dark-mode) .modal-header h2 {
+          color: var(--dark-text-color, #f8f9fa);
+        }
+        
+        :host-context(body.dark-mode) .close-btn {
+          color: var(--dark-text-color-secondary, #adb5bd);
+        }
+        
+        :host-context(body.dark-mode) .tabs {
+          background-color: var(--dark-sidebar-bg, #222);
+          border-right-color: var(--dark-border-color, #444);
+        }
+        
+        :host-context(body.dark-mode) .tab-item {
+          color: var(--dark-text-color-secondary, #adb5bd);
+        }
+        
+        :host-context(body.dark-mode) .tab-item:hover {
+          background-color: var(--dark-hover-bg, rgba(255, 255, 255, 0.05));
+          color: var(--dark-text-color, #f8f9fa);
+        }
+        
+        :host-context(body.dark-mode) .tab-item.active {
+          background-color: var(--dark-active-bg, rgba(74, 108, 247, 0.2));
+        }
+        
+        :host-context(body.dark-mode) .form-group label {
+          color: var(--dark-text-color, #f8f9fa);
+        }
+        
+        :host-context(body.dark-mode) .form-group input,
+        :host-context(body.dark-mode) .form-group select,
+        :host-context(body.dark-mode) .form-group textarea {
+          background-color: var(--dark-input-bg, #343a40);
+          color: var(--dark-text-color, #f8f9fa);
+          border-color: var(--dark-border-color, #495057);
+        }
+        
+        :host-context(body.dark-mode) .form-group .hint {
+          color: var(--dark-text-color-secondary, #adb5bd);
+        }
+        
+        :host-context(body.dark-mode) .section-title {
+          border-bottom-color: var(--dark-border-color, #444);
+          color: var(--dark-text-color, #f8f9fa);
+        }
+        
+        :host-context(body.dark-mode) .modal-footer {
+          border-top-color: var(--dark-border-color, #444);
         }
       </style>
       
       <div class="modal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>Settings</h2>
-            <button id="closeSettingsBtn" class="close-button">&times;</button>
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button class="close-btn" id="closeBtn">&times;</button>
+        </div>
+        
+        <div id="successMessage" class="success-message"></div>
+        <div id="errorMessage" class="error-message"></div>
+        
+        <div class="modal-body">
+          <div class="tabs">
+            <div class="tab-item active" data-tab="general">General</div>
+            <div class="tab-item" data-tab="api-keys">API Keys</div>
+            <div class="tab-item" data-tab="platforms">Platforms</div>
+            <div class="tab-item" data-tab="appearance">Appearance</div>
+            <div class="tab-item" data-tab="advanced">Advanced</div>
           </div>
-          <div class="modal-body">
-            <div class="settings-section">
-              <h3>General Settings</h3>
-              <div class="setting-item">
-                <label for="darkModeToggle">Dark Mode</label>
-                <label class="switch">
-                  <input type="checkbox" id="darkModeToggle">
-                  <span class="slider round"></span>
-                </label>
+          
+          <div class="tab-content">
+            <!-- General Settings -->
+            <div class="tab-pane active" data-tab="general">
+              <h3 class="section-title">General Settings</h3>
+              
+              <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" disabled>
+                <div class="hint">Your username cannot be changed</div>
               </div>
-              <div class="setting-item">
-                <label for="logLevelSelect">Log Level</label>
-                <select id="logLevelSelect">
-                  <option value="debug">Debug</option>
-                  <option value="info">Info</option>
-                  <option value="warn">Warning</option>
+              
+              <div class="form-group">
+                <label for="logLevel">Log Level</label>
+                <select id="logLevel">
                   <option value="error">Error</option>
+                  <option value="warn">Warning</option>
+                  <option value="info">Info</option>
+                  <option value="debug">Debug</option>
                 </select>
+                <div class="hint">Controls the verbosity of application logs</div>
+              </div>
+              
+              <div class="form-group">
+                <label for="dataDir">Data Directory</label>
+                <input type="text" id="dataDir" value="data">
+                <div class="hint">Directory where application data is stored</div>
               </div>
             </div>
             
-            <div class="settings-section">
-              <h3>API Keys</h3>
-              <div class="setting-item">
-                <label for="twoCaptchaApiKey">2Captcha API Key</label>
-                <input type="password" id="twoCaptchaApiKey" placeholder="Enter 2Captcha API Key">
-              </div>
-              <div class="setting-item">
+            <!-- API Keys -->
+            <div class="tab-pane" data-tab="api-keys">
+              <h3 class="section-title">API Keys</h3>
+              
+              <div class="form-group">
                 <label for="openaiApiKey">OpenAI API Key</label>
-                <input type="password" id="openaiApiKey" placeholder="Enter OpenAI API Key">
+                <input type="password" id="openaiApiKey" placeholder="sk-...">
+                <div class="hint">Used for generating bot responses with GPT models</div>
+              </div>
+              
+              <div class="form-group">
+                <label for="twoCaptchaApiKey">2Captcha API Key</label>
+                <input type="password" id="twoCaptchaApiKey" placeholder="Your 2Captcha API key">
+                <div class="hint">Used for solving CAPTCHAs during automated platform authentication</div>
               </div>
             </div>
             
-            <div class="settings-section">
-              <h3>Bot Personalities</h3>
-              <div id="botPersonalitiesList"></div>
-              <button id="addPersonalityBtn" class="secondary-button">Add Personality</button>
+            <!-- Platforms -->
+            <div class="tab-pane" data-tab="platforms">
+              <h3 class="section-title">TikTok</h3>
+              
+              <div class="form-group">
+                <label for="tiktokUsername">TikTok Username</label>
+                <input type="text" id="tiktokUsername" placeholder="Your TikTok username">
+              </div>
+              
+              <div class="form-group">
+                <label for="tiktokPassword">TikTok Password</label>
+                <input type="password" id="tiktokPassword" placeholder="Your TikTok password">
+              </div>
+              
+              <div class="form-group">
+                <label for="tiktokStreamKey">TikTok Stream Key</label>
+                <input type="password" id="tiktokStreamKey" placeholder="Your TikTok stream key">
+                <div class="hint">Found in your TikTok creator dashboard</div>
+              </div>
+              
+              <h3 class="section-title">YouTube</h3>
+              
+              <div class="form-group">
+                <label for="youtubeUsername">YouTube Username</label>
+                <input type="text" id="youtubeUsername" placeholder="Your YouTube username">
+              </div>
+              
+              <div class="form-group">
+                <label for="youtubePassword">YouTube Password</label>
+                <input type="password" id="youtubePassword" placeholder="Your YouTube password">
+              </div>
+              
+              <div class="form-group">
+                <label for="youtubeStreamKey">YouTube Stream Key</label>
+                <input type="password" id="youtubeStreamKey" placeholder="Your YouTube stream key">
+                <div class="hint">Found in your YouTube Studio dashboard</div>
+              </div>
+              
+              <h3 class="section-title">X.com (Twitter)</h3>
+              
+              <div class="form-group">
+                <label for="xcomUsername">X.com Username</label>
+                <input type="text" id="xcomUsername" placeholder="Your X.com username">
+              </div>
+              
+              <div class="form-group">
+                <label for="xcomPassword">X.com Password</label>
+                <input type="password" id="xcomPassword" placeholder="Your X.com password">
+              </div>
+              
+              <div class="form-group">
+                <label for="xcomStreamKey">X.com Stream Key</label>
+                <input type="password" id="xcomStreamKey" placeholder="Your X.com stream key">
+                <div class="hint">Found in your X.com creator dashboard</div>
+              </div>
             </div>
             
-            <div class="settings-section">
-              <h3>Platforms</h3>
-              <div id="platformsList"></div>
-              <button id="addPlatformBtn" class="secondary-button">Add Platform</button>
+            <!-- Appearance -->
+            <div class="tab-pane" data-tab="appearance">
+              <h3 class="section-title">Theme</h3>
+              
+              <div class="form-group">
+                <label for="darkMode">Dark Mode</label>
+                <select id="darkMode">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                  <option value="system">Use System Preference</option>
+                </select>
+                <div class="hint">Controls the application theme</div>
+              </div>
+              
+              <div class="form-group">
+                <label for="fontSize">Font Size</label>
+                <select id="fontSize">
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+                <div class="hint">Controls the text size throughout the application</div>
+              </div>
+            </div>
+            
+            <!-- Advanced -->
+            <div class="tab-pane" data-tab="advanced">
+              <h3 class="section-title">Database</h3>
+              
+              <div class="form-group">
+                <label for="databaseEngine">Database Engine</label>
+                <select id="databaseEngine">
+                  <option value="sqlite3">sqlite3</option>
+                  <option value="better-sqlite3">better-sqlite3</option>
+                </select>
+                <div class="hint">The SQLite engine to use (requires restart)</div>
+              </div>
+              
+              <h3 class="section-title">FFmpeg</h3>
+              
+              <div class="form-group">
+                <label for="ffmpegPath">FFmpeg Path</label>
+                <input type="text" id="ffmpegPath" placeholder="/usr/bin/ffmpeg">
+                <div class="hint">Path to the FFmpeg executable</div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="videoCodec">Video Codec</label>
+                  <select id="videoCodec">
+                    <option value="libx264">H.264 (libx264)</option>
+                    <option value="libx265">H.265 (libx265)</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
+                  <label for="audioCodec">Audio Codec</label>
+                  <select id="audioCodec">
+                    <option value="aac">AAC</option>
+                    <option value="libmp3lame">MP3</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="videoBitrate">Video Bitrate</label>
+                  <select id="videoBitrate">
+                    <option value="500k">500 kbps</option>
+                    <option value="1000k">1000 kbps</option>
+                    <option value="2000k">2000 kbps</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
+                  <label for="audioBitrate">Audio Bitrate</label>
+                  <select id="audioBitrate">
+                    <option value="64k">64 kbps</option>
+                    <option value="128k">128 kbps</option>
+                    <option value="192k">192 kbps</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button id="saveSettingsBtn" class="primary-button">Save Settings</button>
-            <button id="cancelSettingsBtn" class="secondary-button">Cancel</button>
-          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
+          <button id="saveBtn" class="btn btn-primary">Save Settings</button>
         </div>
       </div>
     `;
   }
 
   addEventListeners() {
-    const closeSettingsBtn = this.shadowRoot.getElementById('closeSettingsBtn');
-    const saveSettingsBtn = this.shadowRoot.getElementById('saveSettingsBtn');
-    const cancelSettingsBtn = this.shadowRoot.getElementById('cancelSettingsBtn');
-    const darkModeToggle = this.shadowRoot.getElementById('darkModeToggle');
-    const addPersonalityBtn = this.shadowRoot.getElementById('addPersonalityBtn');
-    const addPlatformBtn = this.shadowRoot.getElementById('addPlatformBtn');
+    const closeBtn = this.shadowRoot.getElementById('closeBtn');
+    const cancelBtn = this.shadowRoot.getElementById('cancelBtn');
+    const saveBtn = this.shadowRoot.getElementById('saveBtn');
+    const tabItems = this.shadowRoot.querySelectorAll('.tab-item');
     
-    closeSettingsBtn.addEventListener('click', () => this.close());
-    cancelSettingsBtn.addEventListener('click', () => this.close());
+    closeBtn.addEventListener('click', () => this.close());
+    cancelBtn.addEventListener('click', () => this.close());
+    saveBtn.addEventListener('click', () => this.saveSettings());
     
-    saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+    tabItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const tabName = item.dataset.tab;
+        this.setActiveTab(tabName);
+      });
+    });
+  }
+
+  open() {
+    this.isOpen = true;
+    this.classList.add('open');
+    this.loadSettings();
+  }
+
+  close() {
+    this.isOpen = false;
+    this.classList.remove('open');
+  }
+
+  setActiveTab(tabName) {
+    this.activeTab = tabName;
     
-    darkModeToggle.addEventListener('change', () => {
-      toggleDarkMode();
+    // Update tab items
+    const tabItems = this.shadowRoot.querySelectorAll('.tab-item');
+    tabItems.forEach(item => {
+      if (item.dataset.tab === tabName) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
     });
     
-    addPersonalityBtn.addEventListener('click', () => this.addPersonality());
-    addPlatformBtn.addEventListener('click', () => this.addPlatform());
+    // Update tab panes
+    const tabPanes = this.shadowRoot.querySelectorAll('.tab-pane');
+    tabPanes.forEach(pane => {
+      if (pane.dataset.tab === tabName) {
+        pane.classList.add('active');
+      } else {
+        pane.classList.remove('active');
+      }
+    });
+  }
+
+  async loadSettings() {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+      
+      // Get user settings
+      this.settings = await getUserSettings(userId);
+      
+      // Set username
+      const usernameInput = this.shadowRoot.getElementById('username');
+      usernameInput.value = localStorage.getItem('username') || '';
+      
+      // Set general settings
+      const logLevelSelect = this.shadowRoot.getElementById('logLevel');
+      logLevelSelect.value = this.settings.LOG_LEVEL || 'info';
+      
+      const dataDirInput = this.shadowRoot.getElementById('dataDir');
+      dataDirInput.value = this.settings.DATA_DIR || 'data';
+      
+      // Set API keys
+      const openaiApiKeyInput = this.shadowRoot.getElementById('openaiApiKey');
+      openaiApiKeyInput.value = this.settings.OPENAI_API_KEY || '';
+      
+      const twoCaptchaApiKeyInput = this.shadowRoot.getElementById('twoCaptchaApiKey');
+      twoCaptchaApiKeyInput.value = this.settings.TWO_CAPTCHA_API_KEY || '';
+      
+      // Set platform credentials
+      const tiktokUsernameInput = this.shadowRoot.getElementById('tiktokUsername');
+      tiktokUsernameInput.value = this.settings.TIKTOK_USERNAME || '';
+      
+      const tiktokPasswordInput = this.shadowRoot.getElementById('tiktokPassword');
+      tiktokPasswordInput.value = this.settings.TIKTOK_PASSWORD || '';
+      
+      const tiktokStreamKeyInput = this.shadowRoot.getElementById('tiktokStreamKey');
+      tiktokStreamKeyInput.value = this.settings.TIKTOK_STREAM_KEY || '';
+      
+      const youtubeUsernameInput = this.shadowRoot.getElementById('youtubeUsername');
+      youtubeUsernameInput.value = this.settings.YOUTUBE_USERNAME || '';
+      
+      const youtubePasswordInput = this.shadowRoot.getElementById('youtubePassword');
+      youtubePasswordInput.value = this.settings.YOUTUBE_PASSWORD || '';
+      
+      const youtubeStreamKeyInput = this.shadowRoot.getElementById('youtubeStreamKey');
+      youtubeStreamKeyInput.value = this.settings.YOUTUBE_STREAM_KEY || '';
+      
+      const xcomUsernameInput = this.shadowRoot.getElementById('xcomUsername');
+      xcomUsernameInput.value = this.settings.XCOM_USERNAME || '';
+      
+      const xcomPasswordInput = this.shadowRoot.getElementById('xcomPassword');
+      xcomPasswordInput.value = this.settings.XCOM_PASSWORD || '';
+      
+      const xcomStreamKeyInput = this.shadowRoot.getElementById('xcomStreamKey');
+      xcomStreamKeyInput.value = this.settings.XCOM_STREAM_KEY || '';
+      
+      // Set appearance settings
+      const darkModeSelect = this.shadowRoot.getElementById('darkMode');
+      darkModeSelect.value = this.settings.DARK_MODE || 'true';
+      
+      const fontSizeSelect = this.shadowRoot.getElementById('fontSize');
+      fontSizeSelect.value = this.settings.FONT_SIZE || 'medium';
+      
+      // Set advanced settings
+      const databaseEngineSelect = this.shadowRoot.getElementById('databaseEngine');
+      databaseEngineSelect.value = this.settings.DATABASE_ENGINE || 'better-sqlite3';
+      
+      const ffmpegPathInput = this.shadowRoot.getElementById('ffmpegPath');
+      ffmpegPathInput.value = this.settings.FFMPEG_PATH || '/usr/bin/ffmpeg';
+      
+      const videoCodecSelect = this.shadowRoot.getElementById('videoCodec');
+      videoCodecSelect.value = this.settings.VIDEO_CODEC || 'libx264';
+      
+      const audioCodecSelect = this.shadowRoot.getElementById('audioCodec');
+      audioCodecSelect.value = this.settings.AUDIO_CODEC || 'aac';
+      
+      const videoBitrateSelect = this.shadowRoot.getElementById('videoBitrate');
+      videoBitrateSelect.value = this.settings.VIDEO_BITRATE || '500k';
+      
+      const audioBitrateSelect = this.shadowRoot.getElementById('audioBitrate');
+      audioBitrateSelect.value = this.settings.AUDIO_BITRATE || '128k';
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      this.showError('Failed to load settings');
+    }
   }
 
   async saveSettings() {
-    if (!this.config) return;
-    
-    // Get values from form
-    const logLevelSelect = this.shadowRoot.getElementById('logLevelSelect');
-    const twoCaptchaApiKey = this.shadowRoot.getElementById('twoCaptchaApiKey');
-    const openaiApiKey = this.shadowRoot.getElementById('openaiApiKey');
-    
-    // Update config object
-    this.config.LOG_LEVEL = logLevelSelect.value;
-    
-    // Save API keys to localStorage (not in config for security)
-    localStorage.setItem('twoCaptchaApiKey', twoCaptchaApiKey.value);
-    localStorage.setItem('openaiApiKey', openaiApiKey.value);
-    
-    // Save config to main process
-    const success = await saveSettings(this.config);
-    
-    if (success) {
-      this.close();
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        this.showError('User ID not found. Please log in again.');
+        return;
+      }
+      
+      // Collect settings from form
+      const settings = {
+        // General settings
+        LOG_LEVEL: this.shadowRoot.getElementById('logLevel').value,
+        DATA_DIR: this.shadowRoot.getElementById('dataDir').value,
+        
+        // API keys
+        OPENAI_API_KEY: this.shadowRoot.getElementById('openaiApiKey').value,
+        TWO_CAPTCHA_API_KEY: this.shadowRoot.getElementById('twoCaptchaApiKey').value,
+        
+        // Platform credentials
+        TIKTOK_USERNAME: this.shadowRoot.getElementById('tiktokUsername').value,
+        TIKTOK_PASSWORD: this.shadowRoot.getElementById('tiktokPassword').value,
+        TIKTOK_STREAM_KEY: this.shadowRoot.getElementById('tiktokStreamKey').value,
+        
+        YOUTUBE_USERNAME: this.shadowRoot.getElementById('youtubeUsername').value,
+        YOUTUBE_PASSWORD: this.shadowRoot.getElementById('youtubePassword').value,
+        YOUTUBE_STREAM_KEY: this.shadowRoot.getElementById('youtubeStreamKey').value,
+        
+        XCOM_USERNAME: this.shadowRoot.getElementById('xcomUsername').value,
+        XCOM_PASSWORD: this.shadowRoot.getElementById('xcomPassword').value,
+        XCOM_STREAM_KEY: this.shadowRoot.getElementById('xcomStreamKey').value,
+        
+        // Appearance settings
+        DARK_MODE: this.shadowRoot.getElementById('darkMode').value,
+        FONT_SIZE: this.shadowRoot.getElementById('fontSize').value,
+        
+        // Advanced settings
+        DATABASE_ENGINE: this.shadowRoot.getElementById('databaseEngine').value,
+        FFMPEG_PATH: this.shadowRoot.getElementById('ffmpegPath').value,
+        VIDEO_CODEC: this.shadowRoot.getElementById('videoCodec').value,
+        AUDIO_CODEC: this.shadowRoot.getElementById('audioCodec').value,
+        VIDEO_BITRATE: this.shadowRoot.getElementById('videoBitrate').value,
+        AUDIO_BITRATE: this.shadowRoot.getElementById('audioBitrate').value
+      };
+      
+      // Save settings
+      const success = await saveUserSettings(userId, settings);
+      
+      if (success) {
+        this.showSuccess('Settings saved successfully');
+        
+        // Update local settings
+        this.settings = { ...this.settings, ...settings };
+        
+        // Apply dark mode if changed
+        if (settings.DARK_MODE === 'true') {
+          document.body.classList.add('dark-mode');
+        } else if (settings.DARK_MODE === 'false') {
+          document.body.classList.remove('dark-mode');
+        }
+        
+        // Close modal after a delay
+        setTimeout(() => this.close(), 1500);
+      } else {
+        this.showError('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      this.showError(`Failed to save settings: ${error.message}`);
     }
   }
 
-  addPersonality() {
-    // In a real app, this would open a dialog to add a new personality
-    const persona = prompt('Enter persona name:');
-    if (!persona) return;
+  showSuccess(message) {
+    const successMessage = this.shadowRoot.getElementById('successMessage');
+    const errorMessage = this.shadowRoot.getElementById('errorMessage');
     
-    const gender = prompt('Enter gender (M, F, or random):');
-    if (!gender || !['M', 'F', 'random'].includes(gender)) {
-      alert('Invalid gender. Must be M, F, or random.');
-      return;
-    }
+    successMessage.textContent = message;
+    successMessage.classList.add('show');
+    errorMessage.classList.remove('show');
     
-    if (!this.config.BOT_PERSONALITIES) {
-      this.config.BOT_PERSONALITIES = [];
-    }
-    
-    this.config.BOT_PERSONALITIES.push({ persona, gender });
-    this.updateBotPersonalitiesList();
+    setTimeout(() => {
+      successMessage.classList.remove('show');
+    }, 3000);
   }
 
-  editPersonality(index) {
-    const personality = this.config.BOT_PERSONALITIES[index];
+  showError(message) {
+    const successMessage = this.shadowRoot.getElementById('successMessage');
+    const errorMessage = this.shadowRoot.getElementById('errorMessage');
     
-    const persona = prompt('Enter persona name:', personality.persona);
-    if (!persona) return;
-    
-    const gender = prompt('Enter gender (M, F, or random):', personality.gender);
-    if (!gender || !['M', 'F', 'random'].includes(gender)) {
-      alert('Invalid gender. Must be M, F, or random.');
-      return;
-    }
-    
-    this.config.BOT_PERSONALITIES[index] = { persona, gender };
-    this.updateBotPersonalitiesList();
-  }
-
-  deletePersonality(index) {
-    if (confirm('Are you sure you want to delete this personality?')) {
-      this.config.BOT_PERSONALITIES.splice(index, 1);
-      this.updateBotPersonalitiesList();
-    }
-  }
-
-  addPlatform() {
-    // In a real app, this would open a dialog to add a new platform
-    const name = prompt('Enter platform name:');
-    if (!name) return;
-    
-    const rtmpTemplate = prompt('Enter RTMP template:');
-    if (!rtmpTemplate) return;
-    
-    const accountCreationUrl = prompt('Enter account creation URL:');
-    if (!accountCreationUrl) return;
-    
-    if (!this.config.PLATFORMS) {
-      this.config.PLATFORMS = [];
-    }
-    
-    this.config.PLATFORMS.push({ name, rtmpTemplate, accountCreationUrl });
-    this.updatePlatformsList();
-  }
-
-  editPlatform(index) {
-    const platform = this.config.PLATFORMS[index];
-    
-    const name = prompt('Enter platform name:', platform.name);
-    if (!name) return;
-    
-    const rtmpTemplate = prompt('Enter RTMP template:', platform.rtmpTemplate);
-    if (!rtmpTemplate) return;
-    
-    const accountCreationUrl = prompt('Enter account creation URL:', platform.accountCreationUrl);
-    if (!accountCreationUrl) return;
-    
-    this.config.PLATFORMS[index] = { name, rtmpTemplate, accountCreationUrl };
-    this.updatePlatformsList();
-  }
-
-  deletePlatform(index) {
-    if (confirm('Are you sure you want to delete this platform?')) {
-      this.config.PLATFORMS.splice(index, 1);
-      this.updatePlatformsList();
-    }
+    errorMessage.textContent = message;
+    errorMessage.classList.add('show');
+    successMessage.classList.remove('show');
   }
 }
 

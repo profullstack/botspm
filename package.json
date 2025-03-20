@@ -1,5 +1,5 @@
 {
-  "name": "multi-platform-ai-bots",
+  "name": "botspm",
   "version": "1.0.0",
   "description": "Desktop application for managing multiple AI bots across streaming platforms",
   "main": "src/main.js",
@@ -19,32 +19,22 @@
     "postinstall": "electron-builder install-app-deps || echo 'Skipping electron-builder install-app-deps'"
   },
   "build": {
-    "appId": "com.yourdomain.multiplatformaibots",
-    "productName": "Multi-Platform AI Bots",
+    "appId": "com.botspm.app",
+    "productName": "bots.pm",
     "copyright": "Copyright © 2025",
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "icon": "assets/icons/mac/icon.icns"
+      "target": ["dmg", "zip"],
+      "icon": "assets/favicon.svg"
     },
     "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "assets/icons/win/icon.ico"
+      "target": ["nsis", "portable"],
+      "icon": "assets/favicon.svg"
     },
     "linux": {
-      "target": [
-        "AppImage",
-        "deb",
-        "rpm"
-      ],
+      "target": ["AppImage", "deb", "rpm"],
       "category": "Development",
-      "icon": "assets/icons/png"
+      "icon": "assets/favicon.svg"
     },
     "directories": {
       "output": "dist"
@@ -97,7 +87,7 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^8.6.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.6"
   },
   "engines": {
     "node": ">=16.0.0 <21.0.0"
