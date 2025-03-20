@@ -566,10 +566,10 @@ async function registerUser(username, password) {
     // Check if we're using sqlite3 or better-sqlite3
     if (db.prepare) {
       // better-sqlite3
-      existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+      existingUser = db.prepare('SELECT id FROM users WHERE username = ? COLLATE BINARY').get(username);
     } else {
       // sqlite3
-      existingUser = await db.get('SELECT id FROM users WHERE username = ?', username);
+      existingUser = await db.get('SELECT id FROM users WHERE username = ? COLLATE BINARY', username);
     }
     
     if (existingUser) {
