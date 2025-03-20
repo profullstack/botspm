@@ -1,0 +1,20 @@
+/* main.css - Main stylesheet that imports all other stylesheets */
+
+/* Import variables and theme */
+@import 'variables.css';
+@import 'themes.css';
+
+/* Import base styles */
+@import 'base.css';
+@import 'layout.css';
+
+/* Import component styles */
+@import 'components/header.css';
+@import 'components/control-panel.css';
+@import 'components/bots-panel.css';
+@import 'components/logs-panel.css';
+@import 'components/bot-card.css';
+@import 'components/modals.css';
+
+/* Import utility styles */
+@import 'utilities.css';

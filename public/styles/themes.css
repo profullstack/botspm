@@ -1,0 +1,72 @@
+/* themes.css - Light and dark theme variables */
+
+:root {
+  /* Light theme colors */
+  --primary-color: #4a6cf7;
+  --primary-color-hover: #3a5ce5;
+  --secondary-color: #6c757d;
+  --secondary-color-hover: #5a6268;
+  --background-color: #f8f9fa;
+  --card-background: #ffffff;
+  --text-color: #212529;
+  --text-muted: #6c757d;
+  --border-color: #dee2e6;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --header-bg: #ffffff;
+  --modal-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #ced4da;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --shadow-color-darker: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark theme colors */
+body.dark-mode {
+  --primary-color: #5a77ff;
+  --primary-color-hover: #6a87ff;
+  --secondary-color: #adb5bd;
+  --secondary-color-hover: #bdc5cd;
+  --background-color: #121212;
+  --card-background: #1e1e1e;
+  --text-color: #f8f9fa;
+  --text-muted: #adb5bd;
+  --border-color: #343a40;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --header-bg: #1e1e1e;
+  --modal-bg: #2d2d2d;
+  --input-bg: #2d2d2d;
+  --input-border: #495057;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-color-darker: rgba(0, 0, 0, 0.4);
+}
+
+/* System preference based theme */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-mode) {
+    --primary-color: #5a77ff;
+    --primary-color-hover: #6a87ff;
+    --secondary-color: #adb5bd;
+    --secondary-color-hover: #bdc5cd;
+    --background-color: #121212;
+    --card-background: #1e1e1e;
+    --text-color: #f8f9fa;
+    --text-muted: #adb5bd;
+    --border-color: #343a40;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --header-bg: #1e1e1e;
+    --modal-bg: #2d2d2d;
+    --input-bg: #2d2d2d;
+    --input-border: #495057;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --shadow-color-darker: rgba(0, 0, 0, 0.4);
+  }
+}

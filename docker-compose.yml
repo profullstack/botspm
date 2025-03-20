@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  bot-master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multi-platform-ai-bots
+    volumes:
+      # Mount the config file so it can be modified without rebuilding
+      - ./config.json:/app/config.json
+      # Mount the database file for persistence
+      - ./data:/app/data
+    environment:
+      # Environment variables can be set here
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      # Uncomment and set your 2CAPTCHA API key if needed
+      # - TWO_CAPTCHA_API_KEY=your_api_key_here
+    restart: unless-stopped
+    # Enable interactive mode for the CLI
+    stdin_open: true
+    tty: true
+    # Uncomment to expose ports if you add a web interface
+    # ports:
+    #   - "3000:3000"
+
+volumes:
+  # Define a named volume for persistent data
+  data:
+    driver: local
+
+# Uncomment to create a custom network if needed
+# networks:
+#   bot-network:
+#     driver: bridge

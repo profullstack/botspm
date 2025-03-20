@@ -1,0 +1,94 @@
+{
+  "name": "botspm",
+  "version": "1.0.0",
+  "description": "Desktop application for managing multiple AI bots across streaming platforms",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "dev": "nodemon --exec electron .",
+    "generate-background": "node scripts/generate-background.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "setup": "npm install && npm run generate-background && npm run generate-icons",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "build": "npm run build:all",
+    "build:all": "electron-builder -mwl",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.yourdomain.multiplatformaibots",
+    "productName": "Multi-Platform AI Bots",
+    "copyright": "Copyright © 2025",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": ["dmg", "zip"],
+      "icon": "assets/icons/mac/icon.icns"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icons/win/icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb", "rpm"],
+      "category": "Development",
+      "icon": "assets/icons/png"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "assets/**/*",
+      "scripts/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "static_background.png",
+        "to": "static_background.png"
+      },
+      {
+        "from": "config.json",
+        "to": "config.json"
+      }
+    ]
+  },
+  "keywords": [
+    "ai",
+    "bots",
+    "streaming",
+    "multi-platform",
+    "tiktok",
+    "youtube",
+    "xcom",
+    "electron",
+    "desktop"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "canvas": "^2.11.2",
+    "dotenv": "^16.3.1",
+    "electron-log": "^5.0.1",
+    "electron-store": "^8.1.0",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^21.5.0",
+    "sqlite": "^5.0.1",
+    "sqlite3": "^5.1.6",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

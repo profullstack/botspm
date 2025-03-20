@@ -1,0 +1,36 @@
+{
+  "DATABASE_PATH": "./data/bots.sqlite",
+  "STATIC_BACKGROUND_PATH": "./static_background.png",
+  "LOG_LEVEL": "info",
+  "PLATFORMS": [
+    {
+      "name": "tiktok",
+      "rtmpTemplate": "rtmp://live.tiktok.com/live/",
+      "accountCreationUrl": "https://www.tiktok.com/signup"
+    },
+    {
+      "name": "youtube",
+      "rtmpTemplate": "rtmp://a.rtmp.youtube.com/live2/",
+      "accountCreationUrl": "https://accounts.google.com/signup/v2/webcreateaccount"
+    },
+    {
+      "name": "xcom",
+      "rtmpTemplate": "rtmp://live.x.com/live/",
+      "accountCreationUrl": "https://x.com/i/flow/signup"
+    }
+  ],
+  "BOT_PERSONALITIES": [
+    { "persona": "Logical Atheist persona", "gender": "M" },
+    { "persona": "Cheerful Spiritual persona", "gender": "F" },
+    { "persona": "Skeptical Philosopher persona", "gender": "random" },
+    { "persona": "Empathetic Listener persona", "gender": "random" }
+  ],
+  "FFMPEG_OPTIONS": {
+    "videoInput": "-re -loop 1 -i",
+    "audioInput": "-f s16le -ar 44100 -ac 2 -i pipe:0",
+    "videoCodec": "-c:v libx264 -preset veryfast -tune stillimage -b:v 500k",
+    "audioCodec": "-c:a aac -b:a 128k -ar 44100",
+    "outputFormat": "-pix_fmt yuv420p -f flv"
+  },
+  "INTERACTION_DELAY_MS": 3000
+}

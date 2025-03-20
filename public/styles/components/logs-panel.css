@@ -1,0 +1,127 @@
+/* logs-panel.css - Styles for the logs panel component */
+
+.logs-panel {
+  background-color: var(--card-background);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  margin-top: var(--spacing-md);
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.logs-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.logs-panel .panel-header h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-color);
+}
+
+.logs-content {
+  font-family: monospace;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
+  overflow-y: auto;
+  flex: 1;
+  white-space: pre-wrap;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.log-entry {
+  margin-bottom: var(--spacing-xs);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.log-entry:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.log-debug {
+  color: var(--info-color);
+}
+
+.log-info {
+  color: inherit;
+}
+
+.log-warn {
+  color: var(--warning-color);
+}
+
+.log-error {
+  color: var(--danger-color);
+}
+
+/* Scrollbar styles */
+.logs-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logs-content::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: var(--border-radius-full);
+}
+
+.logs-content::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-full);
+}
+
+.logs-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--secondary-color);
+}
+
+/* Empty state */
+.logs-content.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Log animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.log-entry {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .logs-panel {
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+  }
+  
+  .logs-panel .panel-header {
+    margin-bottom: var(--spacing-sm);
+  }
+  
+  .logs-content {
+    font-size: var(--font-size-xs);
+  }
+}

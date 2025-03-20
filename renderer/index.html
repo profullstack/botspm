@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <link rel="stylesheet" href="styles.css">
+  <title>Multi-Platform AI Bots</title>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Multi-Platform AI Bots</h1>
+      <div class="header-controls">
+        <button id="settingsBtn" class="icon-button" title="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-content">
+      <div class="dashboard">
+        <section class="control-panel">
+          <h2>Control Panel</h2>
+          <div class="control-buttons">
+            <button id="startBotsBtn" class="primary-button">Start All Bots</button>
+            <button id="stopBotsBtn" class="secondary-button">Stop All Bots</button>
+          </div>
+          
+          <div class="director-panel">
+            <h3>Director Commands</h3>
+            <div class="command-input">
+              <input type="text" id="directorCommandInput" placeholder="Enter director command...">
+              <button id="sendCommandBtn" class="primary-button">Send</button>
+            </div>
+            <div class="command-history">
+              <h4>Recent Commands</h4>
+              <ul id="commandHistoryList"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="bots-panel">
+          <div class="panel-header">
+            <h2>Active Bots</h2>
+            <button id="addBotBtn" class="icon-button" title="Add Bot">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div id="botsList" class="bots-list"></div>
+        </section>
+      </div>
+
+      <div id="logsPanel" class="logs-panel">
+        <div class="panel-header">
+          <h2>Activity Logs</h2>
+          <button id="clearLogsBtn" class="icon-button" title="Clear Logs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+        <div id="logsContent" class="logs-content"></div>
+      </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button id="closeSettingsBtn" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-section">
+            <h3>General Settings</h3>
+            <div class="setting-item">
+              <label for="darkModeToggle">Dark Mode</label>
+              <label class="switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <label for="logLevelSelect">Log Level</label>
+              <select id="logLevelSelect">
+                <option value="debug">Debug</option>
+                <option value="info">Info</option>
+                <option value="warn">Warning</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h3>API Keys</h3>
+            <div class="setting-item">
+              <label for="twoCaptchaApiKey">2Captcha API Key</label>
+              <input type="password" id="twoCaptchaApiKey" placeholder="Enter 2Captcha API Key">
+            </div>
+            <div class="setting-item">
+              <label for="openaiApiKey">OpenAI API Key</label>
+              <input type="password" id="openaiApiKey" placeholder="Enter OpenAI API Key">
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h3>Bot Personalities</h3>
+            <div id="botPersonalitiesList"></div>
+            <button id="addPersonalityBtn" class="secondary-button">Add Personality</button>
+          </div>
+          
+          <div class="settings-section">
+            <h3>Platforms</h3>
+            <div id="platformsList"></div>
+            <button id="addPlatformBtn" class="secondary-button">Add Platform</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveSettingsBtn" class="primary-button">Save Settings</button>
+          <button id="cancelSettingsBtn" class="secondary-button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Bot Modal -->
+    <div id="addBotModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Add New Bot</h2>
+          <button id="closeAddBotBtn" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="botName">Bot Name</label>
+            <input type="text" id="botName" placeholder="Enter bot name">
+          </div>
+          <div class="form-group">
+            <label for="botPersona">Persona</label>
+            <select id="botPersona"></select>
+          </div>
+          <div class="form-group">
+            <label for="botPlatform">Platform</label>
+            <select id="botPlatform"></select>
+          </div>
+          <div class="form-group">
+            <label for="botGender">Gender</label>
+            <select id="botGender">
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+              <option value="random">Random</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="createBotBtn" class="primary-button">Create Bot</button>
+          <button id="cancelAddBotBtn" class="secondary-button">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+/* bots-panel.css - Styles for the bots panel component */
+
+.bots-panel {
+  background-color: var(--card-background);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-color);
+}
+
+.bots-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+  overflow-y: auto;
+  flex: 1;
+  padding-right: var(--spacing-xs); /* Space for scrollbar */
+}
+
+.bots-list p {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  margin: var(--spacing-xl) 0;
+  font-style: italic;
+}
+
+.bots-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bots-list::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: var(--border-radius-full);
+}
+
+.bots-list::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-full);
+}
+
+.bots-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--secondary-color);
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin-bottom: var(--spacing-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .bots-list {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .bots-panel {
+    padding: var(--spacing-sm);
+  }
+  
+  .panel-header {
+    margin-bottom: var(--spacing-sm);
+  }
+  
+  .bots-list {
+    gap: var(--spacing-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .bots-list {
+    grid-template-columns: 1fr;
+  }
+}
