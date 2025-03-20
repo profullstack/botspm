@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * This script generates a static background image for streaming.
- * It creates a simple gradient background with text.
+ * This script creates a placeholder background image for streaming.
+ * Instead of generating an actual image, it downloads a placeholder from a public API.
  * 
  * Usage: node scripts/generate-background.js
  */
@@ -10,43 +10,72 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createCanvas, registerFont } from 'canvas';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import fetch from 'node-fetch';
 
 // Get the directory name of the current module
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outputPath = path.join(__dirname, '..', 'static_background.png');
 
-// Create a canvas
-const width = 1280;
-const height = 720;
-const canvas = createCanvas(width, height);
-const ctx = canvas.getContext('2d');
+/**
+ * Downloads an image from a URL and saves it to the specified path
+ * @param {string} url - The URL of the image to download
+ * @param {string} outputPath - The path where the image will be saved
+ */
+async function downloadImage(url, outputPath) {
+  console.log(`Downloading image from ${url}...`);
+  
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.statusText}`);
+    }
+    
+    const fileStream = createWriteStream(outputPath);
+    await pipeline(response.body, fileStream);
+    
+    console.log(`Background image saved to: ${outputPath}`);
+  } catch (error) {
+    console.error('Error downloading image:', error);
+    createFallbackImage(outputPath);
+  }
+}
 
-// Create a gradient background
-const gradient = ctx.createLinearGradient(0, 0, width, height);
-gradient.addColorStop(0, '#2c3e50');
-gradient.addColorStop(1, '#4ca1af');
-ctx.fillStyle = gradient;
-ctx.fillRect(0, 0, width, height);
+/**
+ * Creates a simple fallback image if download fails
+ * @param {string} outputPath - The path where the image will be saved
+ */
+function createFallbackImage(outputPath) {
+  console.log('Creating fallback image...');
+  
+  // Create a simple 1x1 pixel PNG (minimal valid PNG)
+  const pngHeader = Buffer.from([
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00,
+    0x0C, 0x49, 0x44, 0x41, 0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00,
+    0x00, 0x03, 0x01, 0x01, 0x00, 0x18, 0xDD, 0x8D, 0xB0, 0x00, 0x00, 0x00,
+    0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+  ]);
+  
+  try {
+    fs.writeFileSync(outputPath, pngHeader);
+    console.log(`Fallback image created at: ${outputPath}`);
+  } catch (error) {
+    console.error('Error creating fallback image:', error);
+  }
+}
 
-// Add text
-ctx.font = 'bold 48px Arial';
-ctx.fillStyle = 'white';
-ctx.textAlign = 'center';
-ctx.textBaseline = 'middle';
-ctx.fillText('AI Bot Streaming', width / 2, height / 2 - 50);
+// Main function
+async function main() {
+  // Use a placeholder image service
+  const width = 1280;
+  const height = 720;
+  const imageUrl = `https://picsum.photos/${width}/${height}?random=${Date.now()}`;
+  
+  await downloadImage(imageUrl, outputPath);
+}
 
-// Add subtitle
-ctx.font = '32px Arial';
-ctx.fillText('Multi-Platform Live Session', width / 2, height / 2 + 20);
-
-// Add timestamp
-const now = new Date();
-ctx.font = '24px Arial';
-ctx.fillText(`Generated: ${now.toLocaleString()}`, width / 2, height - 50);
-
-// Save the image
-const buffer = canvas.toBuffer('image/png');
-fs.writeFileSync(outputPath, buffer);
-
-console.log(`Background image created at: ${outputPath}`);
+main().catch(console.error);

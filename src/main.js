@@ -9,6 +9,8 @@ import electronLog from 'electron-log';
 import Store from 'electron-store';
 import dotenv from 'dotenv';
 import { masterProcess } from './master.js';
+import Database from 'better-sqlite3';
+import bcrypt from 'bcryptjs';
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +39,88 @@ const store = new Store({
 // Global reference to mainWindow to prevent garbage collection
 let mainWindow;
 let botProcesses = [];
+let db;
+
+/**
+ * Initialize the database
+ */
+async function initDatabase() {
+  try {
+    const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
+    
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+    
+    // Open database
+    db = new Database(dbPath);
+    
+    // Create tables if they don't exist
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, key)
+      )
+    `);
+    
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS bot_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        bot_name TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        username TEXT,
+        password TEXT,
+        signup_url TEXT,
+        stream_key TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, bot_name, platform)
+      )
+    `);
+    
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS bot_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bot_id INTEGER NOT NULL,
+        input TEXT,
+        response TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (bot_id) REFERENCES bot_accounts(id)
+      )
+    `);
+    
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS director_commands (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        command TEXT NOT NULL,
+        applied BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+    
+    electronLog.info('Database initialized successfully');
+  } catch (error) {
+    electronLog.error('Database initialization error:', error);
+    dialog.showErrorBox('Database Error', `Failed to initialize database: ${error.message}`);
+  }
+}
 
 /**
  * Creates the main application window
@@ -218,6 +302,126 @@ function stopAllBots() {
   }
 }
 
+// User authentication functions
+async function authenticateUser(username, password) {
+  try {
+    const user = db.prepare('SELECT id, username, password FROM users WHERE username = ?').get(username);
+    
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+    
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    
+    if (!passwordMatch) {
+      return { success: false, message: 'Invalid password' };
+    }
+    
+    return { success: true, userId: user.id, username: user.username };
+  } catch (error) {
+    electronLog.error('Authentication error:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+async function registerUser(username, password) {
+  try {
+    // Check if username already exists
+    const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    
+    if (existingUser) {
+      return { success: false, message: 'Username already exists' };
+    }
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Insert new user
+    const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
+    
+    return { success: true, userId: result.lastInsertId };
+  } catch (error) {
+    electronLog.error('Registration error:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+async function saveUserSettings(userId, settings) {
+  try {
+    const stmt = db.prepare('INSERT OR REPLACE INTO user_settings (user_id, key, value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)');
+    
+    // Begin transaction
+    const transaction = db.transaction((settings) => {
+      for (const [key, value] of Object.entries(settings)) {
+        if (value !== undefined && value !== null) {
+          stmt.run(userId, key, value);
+        }
+      }
+    });
+    
+    transaction(settings);
+    
+    return { success: true };
+  } catch (error) {
+    electronLog.error('Save settings error:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+async function getUserSettings(userId) {
+  try {
+    const rows = db.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').all(userId);
+    
+    const settings = {};
+    rows.forEach(row => {
+      settings[row.key] = row.value;
+    });
+    
+    return settings;
+  } catch (error) {
+    electronLog.error('Get settings error:', error);
+    throw error;
+  }
+}
+
+async function getBotsByUser(userId) {
+  try {
+    const bots = db.prepare(`
+      SELECT id, bot_name, platform, username, stream_key 
+      FROM bot_accounts 
+      WHERE user_id = ?
+    `).all(userId);
+    
+    return bots;
+  } catch (error) {
+    electronLog.error('Get bots error:', error);
+    throw error;
+  }
+}
+
+async function createBot(userId, botData) {
+  try {
+    const result = db.prepare(`
+      INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      botData.name,
+      botData.platform,
+      botData.username,
+      botData.password,
+      botData.signupUrl,
+      botData.streamKey
+    );
+    
+    return { success: true, botId: result.lastInsertId };
+  } catch (error) {
+    electronLog.error('Create bot error:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 // IPC handlers for renderer process communication
 ipcMain.on('start-bots', startAllBots);
 ipcMain.on('stop-bots', stopAllBots);
@@ -255,8 +459,34 @@ ipcMain.handle('send-director-command', async (event, command) => {
   }
 });
 
+// User authentication handlers
+ipcMain.handle('authenticate-user', async (event, { username, password }) => {
+  return await authenticateUser(username, password);
+});
+
+ipcMain.handle('register-user', async (event, { username, password }) => {
+  return await registerUser(username, password);
+});
+
+ipcMain.handle('save-user-settings', async (event, { userId, settings }) => {
+  return await saveUserSettings(userId, settings);
+});
+
+ipcMain.handle('get-user-settings', async (event, { userId }) => {
+  return await getUserSettings(userId);
+});
+
+ipcMain.handle('get-user-bots', async (event, { userId }) => {
+  return await getBotsByUser(userId);
+});
+
+ipcMain.handle('create-bot', async (event, { userId, botData }) => {
+  return await createBot(userId, botData);
+});
+
 // App lifecycle events
-app.on('ready', () => {
+app.on('ready', async () => {
+  await initDatabase();
   createWindow();
   
   // Copy default config to user data directory if it doesn't exist
@@ -289,6 +519,11 @@ app.on('activate', () => {
 
 app.on('quit', () => {
   stopAllBots();
+  
+  // Close database connection
+  if (db) {
+    db.close();
+  }
 });
 
 // Handle uncaught exceptions

@@ -1,203 +1,164 @@
 # Multi-Platform AI Bots
 
-A desktop application for managing multiple AI bots across different streaming platforms (YouTube, X.com, TikTok) with automated account creation, CLI-based director commands, and real-time interaction capabilities.
+An Electron desktop application for managing multiple AI bots across streaming platforms like YouTube, TikTok, and X.com (formerly Twitter).
 
-## Features
+## 🌟 Features
 
-- **Multi-Platform Support**: Run bots simultaneously on YouTube, X.com, and TikTok
-- **Automated Account Creation**: Streamlined account setup with CAPTCHA solving
-- **Director Interface**: Issue real-time instructions to all bots
-- **Persona Management**: Configure different personalities and genders for each bot
-- **Database Logging**: Store all bot interactions for analysis
-- **FFmpeg Integration**: Stream audio and video to multiple platforms
-- **Cross-Platform Desktop App**: Built with Electron for Windows, macOS, and Linux
-- **Dark Mode Support**: Toggle between light and dark themes
-- **Secure Configuration**: Environment variables for sensitive data
+- **Multi-Platform Support**: Run bots simultaneously on YouTube, TikTok, and X.com
+- **Bot Profile Management**: Create and customize bot profiles with different personas
+- **Live Session Management**: Host sessions with one bot and have others join
+- **Director Commands**: Send instructions to all bots in a session
+- **AI-Generated Content**: Generate avatars and streaming backgrounds
+- **Platform Authentication**: Automated authentication with streaming platforms
+- **User Management**: Multi-user support with individual settings and bots
+- **Environment Configuration**: User-friendly setup for API keys and platform credentials
+- **Modern UI**: Component-based architecture with dark mode support
 
-## Prerequisites
+## 🚀 Getting Started
 
-- Node.js (v16 or higher)
-- FFmpeg installed and available in PATH
-- 2Captcha API key (for automated account creation)
-- OpenAI API key (for GPT responses)
+### Prerequisites
 
-## Installation
+- Node.js 16.x or higher
+- npm or pnpm
+- Git
 
-### Development Setup
+### Installation
 
 1. Clone the repository:
-   ```
+   ```bash
    git clone https://github.com/yourusername/multi-platform-ai-bots.git
    cd multi-platform-ai-bots
    ```
 
-2. Install dependencies and generate assets:
-   ```
-   npm run setup
+2. Install dependencies:
+   ```bash
+   npm install
+   # or with pnpm
+   pnpm install
    ```
 
-3. Configure environment variables:
-   ```
-   cp .env.example .env
-   ```
-   Edit the `.env` file with your API keys and configuration.
-
-4. Start the development version:
-   ```
+3. Start the development server:
+   ```bash
    npm run dev
+   # or with pnpm
+   pnpm dev
    ```
 
-### Building the Desktop App
+## 👤 User Authentication
 
-#### For All Platforms
-```
-npm run build
-```
+The application supports multiple users, each with their own settings and bots:
 
-#### For Specific Platforms
-- **macOS**: `npm run build:mac`
-- **Windows**: `npm run build:win`
-- **Linux**: `npm run build:linux`
+1. **Registration**: Create a new account with username and password
+2. **Login**: Securely authenticate with your credentials
+3. **Settings**: Configure your environment variables and API keys
+4. **Bot Management**: Create and manage bots associated with your account
 
-The built applications will be available in the `dist` directory.
+## 🛠️ Development
 
-## Usage
-
-### Starting the Application
-
-Launch the application by running the executable for your platform:
-- **Windows**: `Multi-Platform AI Bots.exe`
-- **macOS**: `Multi-Platform AI Bots.app`
-- **Linux**: `multi-platform-ai-bots` or `Multi-Platform AI Bots.AppImage`
-
-### Main Interface
-
-The application has three main sections:
-
-1. **Control Panel**: Start/stop all bots and send director commands
-2. **Bots Panel**: View and manage individual bots
-3. **Logs Panel**: View application logs and bot interactions
-
-### Director Commands
-
-Enter director commands in the input field and click "Send" to broadcast instructions to all active bots. These commands will influence the bots' responses.
-
-Example:
-```
-Now start using more emotional language
-```
-
-### Settings
-
-Access settings by clicking the gear icon in the top-right corner. Here you can configure:
-
-- Dark/Light mode
-- Log level
-- API keys
-- Bot personalities
-- Streaming platforms
-
-## Configuration
-
-### Environment Variables
-
-Sensitive configuration is stored in the `.env` file:
-
-- `TWO_CAPTCHA_API_KEY`: Your 2Captcha API key
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `DATABASE_PATH`: Path to SQLite database
-- `LOG_LEVEL`: Logging verbosity (debug, info, warn, error)
-
-### Application Configuration
-
-General configuration is stored in `config.json`:
-
-- `PLATFORMS`: Array of platform configurations
-- `BOT_PERSONALITIES`: Array of bot persona definitions
-- `FFMPEG_OPTIONS`: FFmpeg streaming parameters
-- `INTERACTION_DELAY_MS`: Delay between interaction cycles
-
-## Project Structure
+### Project Structure
 
 ```
 multi-platform-ai-bots/
-├── src/                  # Main process code
-│   ├── main.js           # Electron main process
-│   ├── master.js         # Bot management logic
-│   └── preload.js        # Electron preload script
-├── renderer/             # Renderer process code
-│   ├── index.html        # Main UI
-│   ├── styles.css        # UI styling
-│   └── renderer.js       # UI logic
-├── scripts/              # Utility scripts
-│   ├── generate-background.js  # Background image generator
-│   └── generate-icons.js       # Icon generator
-├── assets/               # Application assets
-│   └── icons/            # Application icons
-├── config.json           # Application configuration
-├── .env.example          # Example environment variables
-├── package.json          # Node.js dependencies and scripts
-├── Dockerfile            # Docker configuration
-└── docker-compose.yml    # Docker Compose configuration
+├── assets/                # Application assets (icons, images)
+├── public/                # Public assets and styles
+│   └── styles/            # CSS files
+│       ├── components/    # Component-specific styles
+│       └── ...            # Global styles
+├── scripts/               # Utility scripts
+├── src/                   # Source code
+│   ├── ui/                # UI components and logic
+│   │   ├── components/    # Web components
+│   │   └── app.js         # Main UI logic
+│   ├── main.js            # Electron main process
+│   ├── preload.js         # Electron preload script
+│   └── master.js          # Bot management logic
+└── ...                    # Configuration files
 ```
 
-## Extending
+### Database Schema
 
-### Adding New Platforms
+The application uses SQLite for data storage with the following schema:
 
-1. Open the Settings modal
-2. Click "Add Platform"
-3. Enter the platform details:
-   - Name
-   - RTMP template
-   - Account creation URL
+- **users**: User accounts with authentication information
+- **user_settings**: User-specific environment variables and settings
+- **bot_accounts**: Bot profiles associated with specific users
+- **bot_logs**: Interaction logs for each bot
+- **director_commands**: Commands sent to bots during sessions
 
-### Adding New Bot Personalities
+### Building
 
-1. Open the Settings modal
-2. Click "Add Personality"
-3. Enter the personality details:
-   - Persona name
-   - Gender (M, F, or random)
+To build the application for production:
 
-### Implementing Real AI Integration
-
-The current implementation uses placeholder functions for:
-- `transcribeAudio`: Replace with a real speech-to-text service
-- `generateGPTResponse`: Replace with a real LLM API
-- `generateTTS`: Replace with a real text-to-speech service
-
-## Docker Support
-
-While the application is primarily designed as a desktop app, Docker support is included for server deployments:
-
-```
-docker-compose up -d
+```bash
+npm run build
+# or for a specific platform
+npm run build:mac
+npm run build:win
+npm run build:linux
 ```
 
-## Troubleshooting
+## 🤖 Bot Configuration
 
-### FFmpeg Issues
+Bots can be configured with different personalities, platforms, and appearance settings. The application supports:
 
-If you encounter FFmpeg streaming issues:
-1. Verify FFmpeg is installed: `ffmpeg -version`
-2. Check your stream keys are valid
-3. Ensure the static background image exists
+- **Personalities**: Define how bots respond to interactions
+- **Platforms**: Configure which streaming platforms to use
+- **Appearance**: Customize avatars and streaming backgrounds
+- **Authentication**: Manage platform credentials
 
-### Account Creation Issues
+## 🎮 Director Mode
 
-If automated account creation fails:
-1. Verify your 2Captcha API key is valid
-2. Check if the platform has changed its signup flow
-3. Try manual account creation and update the credentials in the database
+The director mode allows you to control all bots in a session:
 
-### Electron App Build Issues
+1. Start a session with one bot as the host
+2. Have other bots join the session
+3. Send director commands to all bots
+4. Control the conversation flow and topics
 
-If you encounter issues building the Electron app:
-1. Make sure you have the necessary build tools installed for your platform
-2. For macOS builds on non-macOS platforms, see Electron-builder documentation
-3. Try running `npm run postinstall` to ensure app dependencies are correctly installed
+## ⚙️ Environment Setup
 
-## License
+The application requires several environment variables to function properly:
 
-MIT
+- **API Keys**: OpenAI API key, 2Captcha API key
+- **Platform Credentials**: Login information for various platforms
+- **Database Configuration**: Path for the SQLite database
+- **Logging Settings**: Log level and file path
+
+These can be configured through the setup interface after logging in.
+
+## 🔧 Troubleshooting
+
+If you encounter build issues with native modules:
+
+```bash
+npm run rebuild
+```
+
+This will rebuild the native modules for your Electron version.
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgements
+
+- [Electron](https://www.electronjs.org/) - Desktop application framework
+- [Puppeteer](https://pptr.dev/) - Headless browser automation
+- [Better-SQLite3](https://github.com/JoshuaWise/better-sqlite3) - SQLite database interface
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) - Password hashing library
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+See the [CONTRIBUTING.md](CONTRIBUTING.md) file for detailed guidelines.
+
+## 📋 Roadmap
+
+Check out our [TODO.md](TODO.md) file for upcoming features and improvements.

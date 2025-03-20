@@ -9,6 +9,9 @@ let darkMode = false;
 let activeBots = [];
 let commandHistory = [];
 let activeSession = null;
+let currentUser = null;
+let userSettings = null;
+let appState = 'login'; // 'login', 'setup', 'dashboard'
 
 // Custom events
 export const AppEvents = {
@@ -22,7 +25,9 @@ export const AppEvents = {
   SESSION_STARTED: 'app-session-started',
   SESSION_JOINED: 'app-session-joined',
   SESSION_ENDED: 'app-session-ended',
-  DIRECTOR_COMMAND: 'app-director-command'
+  DIRECTOR_COMMAND: 'app-director-command',
+  USER_AUTHENTICATED: 'app-user-authenticated',
+  USER_LOGGED_OUT: 'app-user-logged-out'
 };
 
 // Initialize the application
@@ -55,6 +60,31 @@ async function initializeApp() {
     
     // Setup custom event listeners
     setupCustomEventListeners();
+    
+    // Check for stored user session
+    const storedUserId = localStorage.getItem('userId');
+    const storedUsername = localStorage.getItem('username');
+    
+    if (storedUserId && storedUsername) {
+      // Auto-login with stored session
+      currentUser = {
+        id: storedUserId,
+        username: storedUsername
+      };
+      
+      // Load user settings
+      await loadUserSettings();
+      
+      // Show dashboard or setup based on settings
+      if (userSettings && Object.keys(userSettings).length > 0) {
+        showDashboard();
+      } else {
+        showSetup();
+      }
+    } else {
+      // Show login screen
+      showLogin();
+    }
     
     addLogEntry('Application initialized successfully', 'info');
   } catch (error) {
@@ -111,6 +141,13 @@ function setupCustomEventListeners() {
   // Listen for session events
   window.addEventListener('session-created', handleSessionCreated);
   window.addEventListener('session-ended', handleSessionEnded);
+  
+  // Listen for user authentication events
+  window.addEventListener('user-authenticated', handleUserAuthenticated);
+  
+  // Listen for setup events
+  window.addEventListener('setup-complete', handleSetupComplete);
+  window.addEventListener('setup-skipped', handleSetupSkipped);
 }
 
 // Handle director command
@@ -175,6 +212,116 @@ function handleSessionEnded(event) {
     window.dispatchEvent(new CustomEvent(AppEvents.SESSION_ENDED, { 
       detail: { sessionId, hostId } 
     }));
+  }
+}
+
+// Handle user authenticated
+async function handleUserAuthenticated(event) {
+  const { username, userId } = event.detail;
+  
+  // Store user info
+  currentUser = {
+    id: userId,
+    username
+  };
+  
+  // Store in localStorage for session persistence
+  localStorage.setItem('userId', userId);
+  localStorage.setItem('username', username);
+  
+  // Load user settings
+  await loadUserSettings();
+  
+  // Show dashboard or setup based on settings
+  if (userSettings && Object.keys(userSettings).length > 0) {
+    showDashboard();
+  } else {
+    showSetup();
+  }
+  
+  addLogEntry(`User ${username} logged in successfully`, 'info');
+}
+
+// Handle setup complete
+function handleSetupComplete() {
+  showDashboard();
+  addLogEntry('Setup completed successfully', 'info');
+}
+
+// Handle setup skipped
+function handleSetupSkipped() {
+  showDashboard();
+  addLogEntry('Setup skipped', 'info');
+}
+
+// Load user settings
+async function loadUserSettings() {
+  if (!currentUser) return;
+  
+  try {
+    userSettings = await api.getUserSettings(currentUser.id);
+    return userSettings;
+  } catch (error) {
+    addLogEntry(`Failed to load user settings: ${error.message}`, 'error');
+    return {};
+  }
+}
+
+// Show login screen
+function showLogin() {
+  appState = 'login';
+  updateAppState();
+}
+
+// Show setup screen
+function showSetup() {
+  appState = 'setup';
+  updateAppState();
+}
+
+// Show dashboard
+function showDashboard() {
+  appState = 'dashboard';
+  updateAppState();
+  loadUserBots();
+}
+
+// Update app state
+function updateAppState() {
+  const loginComponent = document.querySelector('login-component');
+  const setupComponent = document.querySelector('setup-component');
+  const dashboardContainer = document.querySelector('.dashboard-container');
+  
+  if (loginComponent) {
+    loginComponent.style.display = appState === 'login' ? 'block' : 'none';
+  }
+  
+  if (setupComponent) {
+    setupComponent.style.display = appState === 'setup' ? 'block' : 'none';
+  }
+  
+  if (dashboardContainer) {
+    dashboardContainer.style.display = appState === 'dashboard' ? 'block' : 'none';
+  }
+}
+
+// Load user bots
+async function loadUserBots() {
+  if (!currentUser) return;
+  
+  try {
+    const bots = await api.getUserBots(currentUser.id);
+    
+    // Update bots panel
+    const botsPanel = document.querySelector('bots-panel-component');
+    if (botsPanel) {
+      botsPanel.updateBots(bots);
+    }
+    
+    return bots;
+  } catch (error) {
+    addLogEntry(`Failed to load user bots: ${error.message}`, 'error');
+    return [];
   }
 }
 
@@ -276,6 +423,33 @@ export async function saveSettings(updatedConfig) {
   }
 }
 
+// Save user settings
+export async function saveUserSettings(settings) {
+  if (!currentUser) return false;
+  
+  try {
+    const result = await api.saveUserSettings(currentUser.id, settings);
+    
+    if (result.success) {
+      // Update local settings
+      userSettings = { ...userSettings, ...settings };
+      addLogEntry('User settings saved successfully', 'info');
+      return true;
+    } else {
+      addLogEntry(`Failed to save user settings: ${result.message}`, 'error');
+      return false;
+    }
+  } catch (error) {
+    addLogEntry(`Error saving user settings: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Get user settings
+export function getUserSettings() {
+  return { ...userSettings };
+}
+
 // Update dark mode
 export function updateDarkMode() {
   if (darkMode) {
@@ -304,15 +478,86 @@ export function getConfig() {
 }
 
 // Create a new bot
-export function createBot(botData) {
-  // In a real app, this would communicate with the main process
-  // to create a new bot in the database
-  addLogEntry(`Bot ${botData.name} created`, 'info');
+export async function createBot(botData) {
+  if (!currentUser) return false;
   
-  // Add to active bots
-  activeBots.push(botData);
+  try {
+    const result = await api.createBot(currentUser.id, botData);
+    
+    if (result.success) {
+      addLogEntry(`Bot ${botData.name} created`, 'info');
+      
+      // Reload user bots
+      await loadUserBots();
+      
+      return true;
+    } else {
+      addLogEntry(`Failed to create bot: ${result.message}`, 'error');
+      return false;
+    }
+  } catch (error) {
+    addLogEntry(`Error creating bot: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Authenticate user
+export async function authenticateUser(username, password) {
+  try {
+    const result = await api.authenticateUser(username, password);
+    
+    if (result.success) {
+      // Dispatch event with user info
+      window.dispatchEvent(new CustomEvent(AppEvents.USER_AUTHENTICATED, {
+        detail: {
+          userId: result.userId,
+          username: result.username
+        }
+      }));
+      
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    addLogEntry(`Authentication error: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Register user
+export async function registerUser(username, password) {
+  try {
+    const result = await api.registerUser(username, password);
+    
+    if (result.success) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    addLogEntry(`Registration error: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Logout user
+export function logoutUser() {
+  // Clear user data
+  currentUser = null;
+  userSettings = null;
   
-  return true;
+  // Clear stored session
+  localStorage.removeItem('userId');
+  localStorage.removeItem('username');
+  
+  // Dispatch event
+  window.dispatchEvent(new CustomEvent(AppEvents.USER_LOGGED_OUT));
+  
+  // Show login screen
+  showLogin();
+  
+  addLogEntry('User logged out', 'info');
 }
 
 // Generate AI avatar
@@ -357,10 +602,15 @@ export default {
   addLogEntry,
   clearLogs,
   saveSettings,
+  saveUserSettings,
+  getUserSettings,
   updateDarkMode,
   toggleDarkMode,
   getConfig,
   createBot,
+  authenticateUser,
+  registerUser,
+  logoutUser,
   generateAIAvatar,
   generateAIBackground,
   getActiveSession

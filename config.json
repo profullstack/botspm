@@ -1,6 +1,6 @@
 {
-  "DATABASE_PATH": "./data/bots.sqlite",
-  "STATIC_BACKGROUND_PATH": "./static_background.png",
+  "DATABASE_PATH": "user-data/bots.sqlite",
+  "STATIC_BACKGROUND_PATH": "static_background.png",
   "LOG_LEVEL": "info",
   "PLATFORMS": [
     {
@@ -32,5 +32,11 @@
     "audioCodec": "-c:a aac -b:a 128k -ar 44100",
     "outputFormat": "-pix_fmt yuv420p -f flv"
   },
-  "INTERACTION_DELAY_MS": 3000
+  "INTERACTION_DELAY_MS": 3000,
+  "UI_SETTINGS": {
+    "defaultDarkMode": true,
+    "refreshInterval": 5000,
+    "maxLogEntries": 100,
+    "maxCommandHistory": 20
+  }
 }

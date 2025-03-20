@@ -3,37 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'">
-  <link rel="stylesheet" href="../../public/styles/main.css">
   <title>Multi-Platform AI Bots</title>
+  <link rel="stylesheet" href="../../public/styles/main.css">
 </head>
 <body>
-  <div class="app-container">
-    <header-component></header-component>
-
-    <main class="app-content">
-      <div class="dashboard">
-        <control-panel-component></control-panel-component>
-        <bots-panel-component></bots-panel-component>
-      </div>
-
-      <logs-panel-component></logs-panel-component>
-    </main>
-
-    <settings-modal-component></settings-modal-component>
-    <add-bot-modal-component></add-bot-modal-component>
-  </div>
-
-  <!-- Web Components -->
-  <script src="components/header-component.js" type="module"></script>
-  <script src="components/control-panel-component.js" type="module"></script>
-  <script src="components/bots-panel-component.js" type="module"></script>
-  <script src="components/logs-panel-component.js" type="module"></script>
-  <script src="components/settings-modal-component.js" type="module"></script>
-  <script src="components/add-bot-modal-component.js" type="module"></script>
-  <script src="components/bot-card-component.js" type="module"></script>
+  <!-- Login Component -->
+  <login-component></login-component>
   
-  <!-- Main App Script -->
-  <script src="app.js" type="module"></script>
+  <!-- Setup Component -->
+  <setup-component></setup-component>
+  
+  <!-- Dashboard -->
+  <div class="dashboard-container" style="display: none;">
+    <div class="app-container">
+      <header-component></header-component>
+      
+      <main class="app-content">
+        <div class="dashboard">
+          <control-panel-component></control-panel-component>
+          <bots-panel-component></bots-panel-component>
+        </div>
+        
+        <logs-panel-component></logs-panel-component>
+      </main>
+    </div>
+  </div>
+  
+  <!-- Modal components -->
+  <settings-modal-component></settings-modal-component>
+  <add-bot-modal-component></add-bot-modal-component>
+  
+  <!-- Import web components -->
+  <script type="module" src="components/login-component.js"></script>
+  <script type="module" src="components/setup-component.js"></script>
+  <script type="module" src="components/header-component.js"></script>
+  <script type="module" src="components/control-panel-component.js"></script>
+  <script type="module" src="components/bots-panel-component.js"></script>
+  <script type="module" src="components/bot-card-component.js"></script>
+  <script type="module" src="components/logs-panel-component.js"></script>
+  <script type="module" src="components/settings-modal-component.js"></script>
+  <script type="module" src="components/add-bot-modal-component.js"></script>
+  
+  <!-- Main application script -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
