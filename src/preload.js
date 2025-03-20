@@ -34,8 +34,14 @@ contextBridge.exposeInMainWorld('api', {
   getUserBots: (userId) => 
     ipcRenderer.invoke('get-user-bots', { userId }),
   
+  getBot: (botId) => 
+    ipcRenderer.invoke('get-bot', { botId }),
+  
   createBot: (userId, botData) => 
     ipcRenderer.invoke('create-bot', { userId, botData }),
+  
+  updateBotPersonality: (botId, personalityData) => 
+    ipcRenderer.invoke('update-bot-personality', { botId, personalityData }),
   
   // Event listeners
   onBotsStarted: (callback) => ipcRenderer.on('bots-started', () => callback()),

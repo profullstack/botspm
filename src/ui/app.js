@@ -27,7 +27,10 @@ export const AppEvents = {
   SESSION_ENDED: 'app-session-ended',
   DIRECTOR_COMMAND: 'app-director-command',
   USER_AUTHENTICATED: 'app-user-authenticated',
-  USER_LOGGED_OUT: 'app-user-logged-out'
+  USER_LOGGED_OUT: 'app-user-logged-out',
+  BOT_CREATED: 'app-bot-created',
+  BOT_UPDATED: 'app-bot-updated',
+  PERSONALITY_EDIT: 'app-personality-edit'
 };
 
 // Initialize the application
@@ -148,6 +151,11 @@ function setupCustomEventListeners() {
   // Listen for setup events
   window.addEventListener('setup-complete', handleSetupComplete);
   window.addEventListener('setup-skipped', handleSetupSkipped);
+  
+  // Listen for bot events
+  window.addEventListener('bot-created', handleBotCreated);
+  window.addEventListener('bot-updated', handleBotUpdated);
+  window.addEventListener('edit-bot-personality', handleEditBotPersonality);
 }
 
 // Handle director command
@@ -252,6 +260,66 @@ function handleSetupComplete() {
 function handleSetupSkipped() {
   showDashboard();
   addLogEntry('Setup skipped', 'info');
+}
+
+// Handle bot created
+function handleBotCreated(event) {
+  const { botName } = event.detail;
+  addLogEntry(`Bot "${botName}" created successfully`, 'info');
+  
+  // Reload bots
+  loadUserBots();
+  
+  // Dispatch event for other components
+  window.dispatchEvent(new CustomEvent(AppEvents.BOT_CREATED, { 
+    detail: { botName } 
+  }));
+}
+
+// Handle bot updated
+function handleBotUpdated(event) {
+  const { botId, botName, persona, gender } = event.detail;
+  addLogEntry(`Bot "${botName}" updated successfully`, 'info');
+  
+  // Reload bots
+  loadUserBots();
+  
+  // Dispatch event for other components
+  window.dispatchEvent(new CustomEvent(AppEvents.BOT_UPDATED, { 
+    detail: { botId, botName, persona, gender } 
+  }));
+}
+
+// Handle edit bot personality
+function handleEditBotPersonality(event) {
+  const { botId } = event.detail;
+  
+  // Get bot personality component
+  const personalityComponent = document.querySelector('bot-personality-component');
+  
+  if (personalityComponent) {
+    // Get bot data
+    api.getBot(botId)
+      .then(bot => {
+        if (bot) {
+          // Set bot data in component
+          personalityComponent.botData = bot;
+          
+          // Show component
+          personalityComponent.style.display = 'block';
+          
+          // Dispatch event for other components
+          window.dispatchEvent(new CustomEvent(AppEvents.PERSONALITY_EDIT, { 
+            detail: { botId, botName: bot.bot_name } 
+          }));
+        } else {
+          addLogEntry(`Bot with ID ${botId} not found`, 'error');
+        }
+      })
+      .catch(error => {
+        addLogEntry(`Error loading bot: ${error.message}`, 'error');
+      });
+  }
 }
 
 // Load user settings
@@ -501,6 +569,38 @@ export async function createBot(botData) {
   }
 }
 
+// Update bot personality
+export async function updateBotPersonality(botId, personalityData) {
+  try {
+    const result = await api.updateBotPersonality(botId, personalityData);
+    
+    if (result.success) {
+      addLogEntry(`Bot personality updated`, 'info');
+      
+      // Reload user bots
+      await loadUserBots();
+      
+      return true;
+    } else {
+      addLogEntry(`Failed to update bot personality: ${result.message}`, 'error');
+      return false;
+    }
+  } catch (error) {
+    addLogEntry(`Error updating bot personality: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Get bot by ID
+export async function getBot(botId) {
+  try {
+    return await api.getBot(botId);
+  } catch (error) {
+    addLogEntry(`Error getting bot: ${error.message}`, 'error');
+    return null;
+  }
+}
+
 // Authenticate user
 export async function authenticateUser(username, password) {
   try {
@@ -608,6 +708,8 @@ export default {
   toggleDarkMode,
   getConfig,
   createBot,
+  updateBotPersonality,
+  getBot,
   authenticateUser,
   registerUser,
   logoutUser,

@@ -20,12 +20,6 @@
       "accountCreationUrl": "https://x.com/i/flow/signup"
     }
   ],
-  "BOT_PERSONALITIES": [
-    { "persona": "Logical Atheist persona", "gender": "M" },
-    { "persona": "Cheerful Spiritual persona", "gender": "F" },
-    { "persona": "Skeptical Philosopher persona", "gender": "random" },
-    { "persona": "Empathetic Listener persona", "gender": "random" }
-  ],
   "FFMPEG_OPTIONS": {
     "videoInput": "-re -loop 1 -i",
     "audioInput": "-f s16le -ar 44100 -ac 2 -i pipe:0",

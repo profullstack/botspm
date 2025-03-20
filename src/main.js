@@ -108,6 +108,8 @@ async function initDatabase() {
             password TEXT,
             signup_url TEXT,
             stream_key TEXT,
+            persona TEXT,
+            gender TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE(user_id, bot_name, platform)
@@ -180,6 +182,8 @@ async function initDatabase() {
             password TEXT,
             signup_url TEXT,
             stream_key TEXT,
+            persona TEXT,
+            gender TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE(user_id, bot_name, platform)
@@ -554,14 +558,14 @@ async function getBotsByUser(userId) {
     if (db.prepare) {
       // better-sqlite3
       bots = db.prepare(`
-        SELECT id, bot_name, platform, username, stream_key 
+        SELECT id, bot_name, platform, username, stream_key, persona, gender 
         FROM bot_accounts 
         WHERE user_id = ?
       `).all(userId);
     } else {
       // sqlite3
       bots = await db.all(`
-        SELECT id, bot_name, platform, username, stream_key 
+        SELECT id, bot_name, platform, username, stream_key, persona, gender 
         FROM bot_accounts 
         WHERE user_id = ?
       `, userId);
@@ -574,6 +578,34 @@ async function getBotsByUser(userId) {
   }
 }
 
+async function getBotById(botId) {
+  try {
+    let bot;
+    
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      bot = db.prepare(`
+        SELECT id, user_id, bot_name, platform, username, password, signup_url, stream_key, persona, gender 
+        FROM bot_accounts 
+        WHERE id = ?
+      `).get(botId);
+    } else {
+      // sqlite3
+      bot = await db.get(`
+        SELECT id, user_id, bot_name, platform, username, password, signup_url, stream_key, persona, gender 
+        FROM bot_accounts 
+        WHERE id = ?
+      `, botId);
+    }
+    
+    return bot;
+  } catch (error) {
+    electronLog.error('Get bot error:', error);
+    throw error;
+  }
+}
+
 async function createBot(userId, botData) {
   try {
     let result;
@@ -582,8 +614,8 @@ async function createBot(userId, botData) {
     if (db.prepare) {
       // better-sqlite3
       result = db.prepare(`
-        INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key, persona, gender)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         userId,
         botData.name,
@@ -591,15 +623,17 @@ async function createBot(userId, botData) {
         botData.username,
         botData.password,
         botData.signupUrl,
-        botData.streamKey
+        botData.streamKey,
+        botData.persona,
+        botData.gender
       );
       
       return { success: true, botId: result.lastInsertRowid };
     } else {
       // sqlite3
       result = await db.run(`
-        INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key, persona, gender)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
         userId,
         botData.name,
@@ -607,13 +641,49 @@ async function createBot(userId, botData) {
         botData.username,
         botData.password,
         botData.signupUrl,
-        botData.streamKey
+        botData.streamKey,
+        botData.persona,
+        botData.gender
       );
       
       return { success: true, botId: result.lastID };
     }
   } catch (error) {
     electronLog.error('Create bot error:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+async function updateBotPersonality(botId, personalityData) {
+  try {
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      db.prepare(`
+        UPDATE bot_accounts 
+        SET persona = ?, gender = ? 
+        WHERE id = ?
+      `).run(
+        personalityData.persona,
+        personalityData.gender,
+        botId
+      );
+    } else {
+      // sqlite3
+      await db.run(`
+        UPDATE bot_accounts 
+        SET persona = ?, gender = ? 
+        WHERE id = ?
+      `,
+        personalityData.persona,
+        personalityData.gender,
+        botId
+      );
+    }
+    
+    return { success: true };
+  } catch (error) {
+    electronLog.error('Update bot personality error:', error);
     return { success: false, message: error.message };
   }
 }
@@ -676,8 +746,16 @@ ipcMain.handle('get-user-bots', async (event, { userId }) => {
   return await getBotsByUser(userId);
 });
 
+ipcMain.handle('get-bot', async (event, { botId }) => {
+  return await getBotById(botId);
+});
+
 ipcMain.handle('create-bot', async (event, { userId, botData }) => {
   return await createBot(userId, botData);
+});
+
+ipcMain.handle('update-bot-personality', async (event, { botId, personalityData }) => {
+  return await updateBotPersonality(botId, personalityData);
 });
 
 // App lifecycle events

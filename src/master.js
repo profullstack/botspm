@@ -56,12 +56,6 @@ async function loadConfig(providedConfig = null) {
           accountCreationUrl: 'https://x.com/i/flow/signup'
         }
       ],
-      BOT_PERSONALITIES: [
-        { persona: 'Logical Atheist persona', gender: 'M' },
-        { persona: 'Cheerful Spiritual persona', gender: 'F' },
-        { persona: 'Skeptical Philosopher persona', gender: 'random' },
-        { persona: 'Empathetic Listener persona', gender: 'random' }
-      ],
       FFMPEG_OPTIONS: {
         videoInput: '-re -loop 1 -i',
         audioInput: '-f s16le -ar 44100 -ac 2 -i pipe:0',
@@ -348,6 +342,8 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
             password TEXT, 
             signup_url TEXT,
             stream_key TEXT,
+            persona TEXT,
+            gender TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(bot_name, platform)
           )
@@ -366,15 +362,17 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
         for (const bot of botsConfig) {
           await db.run(`
             INSERT OR REPLACE INTO bot_accounts 
-            (bot_name, platform, username, password, signup_url, stream_key) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            (bot_name, platform, username, password, signup_url, stream_key, persona, gender) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `,
             bot.name, 
             bot.platform, 
             bot.username, 
             bot.password, 
             bot.signupUrl, 
-            bot.streamKey
+            bot.streamKey,
+            bot.persona,
+            bot.gender
           );
         }
       } catch (error) {
@@ -410,6 +408,8 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
             password TEXT, 
             signup_url TEXT,
             stream_key TEXT,
+            persona TEXT,
+            gender TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(bot_name, platform)
           )
@@ -427,8 +427,8 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
         // Insert or update bot accounts
         const stmt = db.prepare(`
           INSERT OR REPLACE INTO bot_accounts 
-          (bot_name, platform, username, password, signup_url, stream_key) 
-          VALUES (?, ?, ?, ?, ?, ?)
+          (bot_name, platform, username, password, signup_url, stream_key, persona, gender) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         for (const bot of botsConfig) {
@@ -438,7 +438,9 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
             bot.username, 
             bot.password, 
             bot.signupUrl, 
-            bot.streamKey
+            bot.streamKey,
+            bot.persona,
+            bot.gender
           );
         }
       } catch (error) {
@@ -452,6 +454,47 @@ async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqli
   } catch (error) {
     logger.error(`Database setup error: ${error.message}`);
     throw error;
+  }
+}
+
+/**
+ * Get all bots from the database
+ * @param {Object} db - Database connection
+ * @param {Object} logger - Winston logger instance
+ * @param {string} dbEngine - Database engine being used
+ * @returns {Promise<Array>} Array of bot objects
+ */
+async function getAllBots(db, logger, dbEngine = 'better-sqlite3') {
+  try {
+    let bots;
+    
+    if (dbEngine === 'sqlite3') {
+      bots = await db.all(`
+        SELECT id, bot_name, platform, username, password, signup_url, stream_key, persona, gender
+        FROM bot_accounts
+      `);
+    } else {
+      bots = db.prepare(`
+        SELECT id, bot_name, platform, username, password, signup_url, stream_key, persona, gender
+        FROM bot_accounts
+      `).all();
+    }
+    
+    // Format bot objects
+    return bots.map(bot => ({
+      id: bot.id,
+      name: bot.bot_name,
+      platform: bot.platform,
+      username: bot.username,
+      password: bot.password,
+      signupUrl: bot.signup_url,
+      streamKey: bot.stream_key,
+      persona: bot.persona || 'Default persona',
+      gender: bot.gender || 'M'
+    }));
+  } catch (error) {
+    logger.error(`Failed to get bots: ${error.message}`);
+    return [];
   }
 }
 
@@ -654,14 +697,14 @@ Available commands:
       try {
         let bots;
         if (dbEngine === 'sqlite3') {
-          bots = await db.all('SELECT bot_name, platform FROM bot_accounts');
+          bots = await db.all('SELECT bot_name, platform, persona, gender FROM bot_accounts');
         } else {
-          bots = db.prepare('SELECT bot_name, platform FROM bot_accounts').all();
+          bots = db.prepare('SELECT bot_name, platform, persona, gender FROM bot_accounts').all();
         }
         
         console.log('\nActive bots:');
         bots.forEach(bot => {
-          console.log(`- ${bot.bot_name} on ${bot.platform}`);
+          console.log(`- ${bot.bot_name} on ${bot.platform} (${bot.persona || 'Default persona'}, ${bot.gender || 'M'})`);
         });
         console.log('');
       } catch (error) {
@@ -729,21 +772,72 @@ export async function masterProcess(providedConfig = null) {
     // Setup database
     const db = await setupDatabase(config.DATABASE_PATH, [], logger, dbEngine);
     
-    // Process bot personalities and platforms
-    const directorCommands = [];
-    const botsConfig = config.BOT_PERSONALITIES.map((bot, index) => {
-      const assignedPlatform = config.PLATFORMS[index % config.PLATFORMS.length];
-      return {
-        name: `Bot${index + 1}`,
-        persona: bot.persona,
-        gender: bot.gender,
-        platform: assignedPlatform.name,
-        streamKey: `${assignedPlatform.rtmpTemplate}BOT_${index + 1}_KEY`,
-        username: `bot${index + 1}_${assignedPlatform.name}`,
-        password: `securePassword${index + 1}`,
-        signupUrl: assignedPlatform.accountCreationUrl
-      };
-    });
+    // Get bots from database instead of config
+    const botsFromDb = await getAllBots(db, logger, dbEngine);
+    
+    // If no bots in database, create default bots from platforms in config
+    let botsConfig = botsFromDb;
+    
+    if (botsConfig.length === 0) {
+      logger.info('No bots found in database. Creating default bots from config.');
+      
+      // Create default bots from platforms in config
+      const defaultPersonalities = [
+        { persona: 'Logical Atheist persona', gender: 'M' },
+        { persona: 'Cheerful Spiritual persona', gender: 'F' },
+        { persona: 'Skeptical Philosopher persona', gender: 'random' },
+        { persona: 'Empathetic Listener persona', gender: 'random' }
+      ];
+      
+      botsConfig = defaultPersonalities.map((personality, index) => {
+        const assignedPlatform = config.PLATFORMS[index % config.PLATFORMS.length];
+        return {
+          name: `Bot${index + 1}`,
+          persona: personality.persona,
+          gender: personality.gender,
+          platform: assignedPlatform.name,
+          streamKey: `${assignedPlatform.rtmpTemplate}BOT_${index + 1}_KEY`,
+          username: `bot${index + 1}_${assignedPlatform.name}`,
+          password: `securePassword${index + 1}`,
+          signupUrl: assignedPlatform.accountCreationUrl
+        };
+      });
+      
+      // Save default bots to database
+      for (const bot of botsConfig) {
+        if (dbEngine === 'sqlite3') {
+          await db.run(`
+            INSERT INTO bot_accounts (bot_name, platform, username, password, signup_url, stream_key, persona, gender)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+            bot.name,
+            bot.platform,
+            bot.username,
+            bot.password,
+            bot.signupUrl,
+            bot.streamKey,
+            bot.persona,
+            bot.gender
+          );
+        } else {
+          const stmt = db.prepare(`
+            INSERT INTO bot_accounts (bot_name, platform, username, password, signup_url, stream_key, persona, gender)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          
+          stmt.run(
+            bot.name,
+            bot.platform,
+            bot.username,
+            bot.password,
+            bot.signupUrl,
+            bot.streamKey,
+            bot.persona,
+            bot.gender
+          );
+        }
+      }
+    }
     
     // Initialize bots with FFmpeg processes
     const bots = botsConfig.map(bot => ({
@@ -763,10 +857,11 @@ export async function masterProcess(providedConfig = null) {
     
     logger.info('Bots initialized across multiple platforms:');
     bots.forEach(bot => {
-      logger.info(`- ${bot.name} on ${bot.platform} (Signup: ${bot.signupUrl})`);
+      logger.info(`- ${bot.name} on ${bot.platform} (${bot.persona}, ${bot.gender})`);
     });
     
     // Start director CLI
+    const directorCommands = [];
     const cli = startDirectorCLI(db, directorCommands, logger, dbEngine);
     
     // Create a master process object that can be controlled externally
