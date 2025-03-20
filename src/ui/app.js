@@ -1,7 +1,10 @@
 // app.js - Main application script for the renderer process
 
-// Import API from preload script
-const { api } = window;
+// Import API from preload script for Electron-specific functionality
+const { api: electronApi } = window;
+
+// Import our API client for backend communication
+import apiClient from './api-client.js';
 
 // Application state
 let appConfig = null;
@@ -37,7 +40,7 @@ export const AppEvents = {
 async function initializeApp() {
   try {
     // Load configuration
-    appConfig = await api.getConfig();
+    appConfig = await electronApi.getConfig();
     
     if (!appConfig) {
       addLogEntry('Error loading configuration. Using defaults.', 'error');
@@ -67,8 +70,9 @@ async function initializeApp() {
     // Check for stored user session
     const storedUserId = localStorage.getItem('userId');
     const storedUsername = localStorage.getItem('username');
+    const storedToken = apiClient.getAuthToken();
     
-    if (storedUserId && storedUsername) {
+    if (storedUserId && storedUsername && storedToken) {
       // Auto-login with stored session
       currentUser = {
         id: storedUserId,
@@ -97,19 +101,19 @@ async function initializeApp() {
 
 // Setup IPC event listeners
 function setupIPCListeners() {
-  api.onBotsStarted(() => {
+  electronApi.onBotsStarted(() => {
     addLogEntry('All bots started successfully', 'info');
     updateBotStatus(true);
     window.dispatchEvent(new CustomEvent(AppEvents.BOTS_STARTED));
   });
   
-  api.onBotsStopped(() => {
+  electronApi.onBotsStopped(() => {
     addLogEntry('All bots stopped', 'info');
     updateBotStatus(false);
     window.dispatchEvent(new CustomEvent(AppEvents.BOTS_STOPPED));
   });
   
-  api.onDirectorCommandSent((command) => {
+  electronApi.onDirectorCommandSent((command) => {
     addLogEntry(`Director command sent: ${command}`, 'info');
     addCommandToHistory(command);
     window.dispatchEvent(new CustomEvent(AppEvents.COMMAND_SENT, { 
@@ -117,20 +121,20 @@ function setupIPCListeners() {
     }));
   });
   
-  api.onOpenSettings(() => {
+  electronApi.onOpenSettings(() => {
     document.querySelector('settings-modal-component').open();
   });
   
-  api.onCreateBot(() => {
+  electronApi.onCreateBot(() => {
     document.querySelector('add-bot-modal-component').open();
   });
   
-  api.onToggleDarkMode((mode) => {
+  electronApi.onToggleDarkMode((mode) => {
     darkMode = mode;
     updateDarkMode();
   });
   
-  api.onOpenDocumentation(() => {
+  electronApi.onOpenDocumentation(() => {
     addLogEntry('Documentation requested', 'info');
     // In a real app, this would open documentation
   });
@@ -165,11 +169,11 @@ function handleDirectorCommand(event) {
   // Add to command history
   addCommandToHistory(command);
   
-  // Send to main process
-  api.sendDirectorCommand(command)
+  // Send to API
+  apiClient.director.sendCommand(command)
     .then(result => {
       if (!result.success) {
-        addLogEntry(`Failed to send command: ${result.error}`, 'error');
+        addLogEntry(`Failed to send command: ${result.message}`, 'error');
       }
     })
     .catch(error => {
@@ -299,7 +303,7 @@ function handleEditBotPersonality(event) {
   
   if (personalityComponent) {
     // Get bot data
-    api.getBot(botId)
+    apiClient.bots.get(botId)
       .then(bot => {
         if (bot) {
           // Set bot data in component
@@ -327,7 +331,7 @@ async function loadUserSettings() {
   if (!currentUser) return;
   
   try {
-    userSettings = await api.getUserSettings(currentUser.id);
+    userSettings = await apiClient.settings.get(currentUser.id);
     return userSettings;
   } catch (error) {
     addLogEntry(`Failed to load user settings: ${error.message}`, 'error');
@@ -378,7 +382,7 @@ async function loadUserBots() {
   if (!currentUser) return;
   
   try {
-    const bots = await api.getUserBots(currentUser.id);
+    const bots = await apiClient.bots.getAll(currentUser.id);
     
     // Update bots panel
     const botsPanel = document.querySelector('bots-panel-component');
@@ -396,13 +400,13 @@ async function loadUserBots() {
 // Start all bots
 export function startBots() {
   addLogEntry('Starting all bots...', 'info');
-  api.startBots();
+  electronApi.startBots();
 }
 
 // Stop all bots
 export function stopBots() {
   addLogEntry('Stopping all bots...', 'info');
-  api.stopBots();
+  electronApi.stopBots();
 }
 
 // Send director command
@@ -410,12 +414,12 @@ export async function sendDirectorCommand(command) {
   if (!command || typeof command !== 'string' || !command.trim()) return false;
   
   try {
-    const result = await api.sendDirectorCommand(command);
+    const result = await apiClient.director.sendCommand(command);
     
     if (result.success) {
       return true;
     } else {
-      addLogEntry(`Failed to send command: ${result.error}`, 'error');
+      addLogEntry(`Failed to send command: ${result.message}`, 'error');
       return false;
     }
   } catch (error) {
@@ -476,7 +480,7 @@ export async function saveSettings(updatedConfig) {
     appConfig = { ...appConfig, ...updatedConfig };
     
     // Save config to main process
-    const result = await api.saveConfig(appConfig);
+    const result = await electronApi.saveConfig(appConfig);
     
     if (result.success) {
       addLogEntry('Settings saved successfully', 'info');
@@ -496,7 +500,7 @@ export async function saveUserSettings(settings) {
   if (!currentUser) return false;
   
   try {
-    const result = await api.saveUserSettings(currentUser.id, settings);
+    const result = await apiClient.settings.save(currentUser.id, settings);
     
     if (result.success) {
       // Update local settings
@@ -550,7 +554,7 @@ export async function createBot(botData) {
   if (!currentUser) return false;
   
   try {
-    const result = await api.createBot(currentUser.id, botData);
+    const result = await apiClient.bots.create(currentUser.id, botData);
     
     if (result.success) {
       addLogEntry(`Bot ${botData.name} created`, 'info');
@@ -572,7 +576,7 @@ export async function createBot(botData) {
 // Update bot personality
 export async function updateBotPersonality(botId, personalityData) {
   try {
-    const result = await api.updateBotPersonality(botId, personalityData);
+    const result = await apiClient.bots.updatePersonality(botId, personalityData);
     
     if (result.success) {
       addLogEntry(`Bot personality updated`, 'info');
@@ -594,7 +598,7 @@ export async function updateBotPersonality(botId, personalityData) {
 // Get bot by ID
 export async function getBot(botId) {
   try {
-    return await api.getBot(botId);
+    return await apiClient.bots.get(botId);
   } catch (error) {
     addLogEntry(`Error getting bot: ${error.message}`, 'error');
     return null;
@@ -604,7 +608,7 @@ export async function getBot(botId) {
 // Authenticate user
 export async function authenticateUser(username, password) {
   try {
-    const result = await api.authenticateUser(username, password);
+    const result = await apiClient.auth.login(username, password);
     
     if (result.success) {
       // Dispatch event with user info
@@ -628,7 +632,7 @@ export async function authenticateUser(username, password) {
 // Register user
 export async function registerUser(username, password) {
   try {
-    const result = await api.registerUser(username, password);
+    const result = await apiClient.auth.register(username, password);
     
     if (result.success) {
       return true;
@@ -650,6 +654,7 @@ export function logoutUser() {
   // Clear stored session
   localStorage.removeItem('userId');
   localStorage.removeItem('username');
+  apiClient.auth.logout();
   
   // Dispatch event
   window.dispatchEvent(new CustomEvent(AppEvents.USER_LOGGED_OUT));

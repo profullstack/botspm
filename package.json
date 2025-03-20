@@ -1,5 +1,5 @@
 {
-  "name": "botspm",
+  "name": "bots.pm",
   "version": "1.0.0",
   "description": "Desktop application for managing multiple AI bots across streaming platforms",
   "main": "src/main.js",
@@ -7,6 +7,10 @@
   "scripts": {
     "start": "electron .",
     "dev": "nodemon --exec electron .",
+    "api": "node src/api-server.js",
+    "dev:api": "nodemon src/api-server.js",
+    "dev:web": "node src/web-server.js",
+    "dev:all": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "setup": "bin/setup.sh",
     "test": "echo \"Error: no test specified\" && exit 1",
     "pack": "electron-builder --dir",
@@ -82,20 +86,24 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@hono/node-server": "^1.3.3",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.3.1",
     "electron-log": "^5.0.1",
     "electron-store": "^8.1.0",
+    "hono": "^3.12.0",
     "node-fetch": "^3.3.2",
     "puppeteer-core": "^21.5.0",
+    "serve-static": "^1.15.0",
     "sqlite": "^5.1.1",
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@octokit/rest": "^19.0.7",
+    "concurrently": "^8.2.2",
     "electron": "^28.0.0",
     "electron-builder": "^24.6.4",
-    "nodemon": "^3.0.1",
-    "@octokit/rest": "^19.0.7"
+    "nodemon": "^3.0.1"
   },
   "optionalDependencies": {
     "better-sqlite3": "^8.6.0",

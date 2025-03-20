@@ -1,6 +1,6 @@
 // login-component.js - Login web component
 
-import { authenticateUser, registerUser } from '../app.js';
+import api from '../api-client.js';
 
 class LoginComponent extends HTMLElement {
   constructor() {
@@ -39,6 +39,12 @@ class LoginComponent extends HTMLElement {
         .app-logo {
           text-align: center;
           margin-bottom: 2rem;
+        }
+        
+        .app-logo img {
+          width: 120px;
+          height: auto;
+          margin-bottom: 1rem;
         }
         
         .app-logo h1 {
@@ -141,7 +147,8 @@ class LoginComponent extends HTMLElement {
       
       <div class="login-container">
         <div class="app-logo">
-          <h1>Multi-Platform AI Bots</h1>
+          <img src="../../assets/logo.svg" alt="bots.pm Logo">
+          <h1>bots.pm</h1>
           <p>Manage your AI bots across multiple platforms</p>
         </div>
         
@@ -256,14 +263,17 @@ class LoginComponent extends HTMLElement {
     }
     
     try {
-      const success = await authenticateUser(username, password);
+      const result = await api.auth.login(username, password);
       
-      if (success) {
+      if (result.success) {
         // Dispatch event to notify app that user is authenticated
         this.dispatchEvent(new CustomEvent('user-authenticated', {
           bubbles: true,
           composed: true,
-          detail: { username }
+          detail: { 
+            username: result.username,
+            userId: result.userId
+          }
         }));
       } else {
         loginError.textContent = 'Invalid username or password';
@@ -294,9 +304,9 @@ class LoginComponent extends HTMLElement {
     }
     
     try {
-      const success = await registerUser(username, password);
+      const result = await api.auth.register(username, password);
       
-      if (success) {
+      if (result.success) {
         // Show login form with success message
         this.toggleForm(false);
         const loginError = this.shadowRoot.getElementById('loginError');
@@ -304,7 +314,7 @@ class LoginComponent extends HTMLElement {
         loginError.style.color = 'var(--success-color, #28a745)';
         loginError.classList.add('show');
       } else {
-        registerError.textContent = 'Username already exists';
+        registerError.textContent = result.message || 'Username already exists';
         registerError.classList.add('show');
       }
     } catch (error) {

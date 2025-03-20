@@ -16,32 +16,13 @@ contextBridge.exposeInMainWorld('api', {
   // Director commands
   sendDirectorCommand: (command) => ipcRenderer.invoke('send-director-command', command),
   
-  // User authentication
-  authenticateUser: (username, password) => 
-    ipcRenderer.invoke('authenticate-user', { username, password }),
+  // System information
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
   
-  registerUser: (username, password) => 
-    ipcRenderer.invoke('register-user', { username, password }),
-  
-  // User settings
-  saveUserSettings: (userId, settings) => 
-    ipcRenderer.invoke('save-user-settings', { userId, settings }),
-  
-  getUserSettings: (userId) => 
-    ipcRenderer.invoke('get-user-settings', { userId }),
-  
-  // Bot management
-  getUserBots: (userId) => 
-    ipcRenderer.invoke('get-user-bots', { userId }),
-  
-  getBot: (botId) => 
-    ipcRenderer.invoke('get-bot', { botId }),
-  
-  createBot: (userId, botData) => 
-    ipcRenderer.invoke('create-bot', { userId, botData }),
-  
-  updateBotPersonality: (botId, personalityData) => 
-    ipcRenderer.invoke('update-bot-personality', { botId, personalityData }),
+  // File operations
+  openFile: (options) => ipcRenderer.invoke('open-file', options),
+  saveFile: (options, data) => ipcRenderer.invoke('save-file', options, data),
   
   // Event listeners
   onBotsStarted: (callback) => ipcRenderer.on('bots-started', () => callback()),
@@ -51,14 +32,6 @@ contextBridge.exposeInMainWorld('api', {
   onCreateBot: (callback) => ipcRenderer.on('create-bot', () => callback()),
   onToggleDarkMode: (callback) => ipcRenderer.on('toggle-dark-mode', (_, darkMode) => callback(darkMode)),
   onOpenDocumentation: (callback) => ipcRenderer.on('open-documentation', () => callback()),
-  
-  // System information
-  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
-  
-  // File operations
-  openFile: (options) => ipcRenderer.invoke('open-file', options),
-  saveFile: (options, data) => ipcRenderer.invoke('save-file', options, data),
   
   // Remove event listeners (to prevent memory leaks)
   removeAllListeners: () => {

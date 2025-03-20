@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bots.pm</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles/main.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Login/Register Form -->
+    <div id="auth-container" class="container">
+      <div class="auth-form">
+        <div class="app-logo">
+          <img src="/assets/logo.svg" alt="bots.pm Logo">
+          <h1>bots.pm</h1>
+          <p>Manage your AI bots across multiple platforms</p>
+        </div>
+        
+        <h2 id="form-title">Login</h2>
+        
+        <!-- Login Form -->
+        <div id="login-form">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter your username">
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter your password">
+            <div id="login-error" class="error-message"></div>
+          </div>
+          
+          <div class="form-actions">
+            <button id="login-btn" class="primary-button">Login</button>
+            <button id="show-register-btn" class="secondary-button">Don't have an account? Register</button>
+          </div>
+        </div>
+        
+        <!-- Register Form -->
+        <div id="register-form" style="display: none;">
+          <div class="form-group">
+            <label for="new-username">Username</label>
+            <input type="text" id="new-username" placeholder="Choose a username">
+          </div>
+          
+          <div class="form-group">
+            <label for="new-password">Password</label>
+            <input type="password" id="new-password" placeholder="Choose a password">
+          </div>
+          
+          <div class="form-group">
+            <label for="confirm-password">Confirm Password</label>
+            <input type="password" id="confirm-password" placeholder="Confirm your password">
+            <div id="register-error" class="error-message"></div>
+          </div>
+          
+          <div class="form-actions">
+            <button id="register-btn" class="primary-button">Register</button>
+            <button id="show-login-btn" class="secondary-button">Already have an account? Login</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dashboard -->
+    <div id="dashboard-container" class="container" style="display: none;">
+      <header>
+        <div class="logo">
+          <img src="/assets/logo.svg" alt="bots.pm Logo">
+          <h1>bots.pm</h1>
+        </div>
+        <nav>
+          <button id="dashboard-nav" class="nav-button active">Dashboard</button>
+          <button id="bots-nav" class="nav-button">Bots</button>
+          <button id="settings-nav" class="nav-button">Settings</button>
+          <button id="logout-btn" class="logout-button">Logout</button>
+        </nav>
+      </header>
+      
+      <main>
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="view">
+          <h2>Dashboard</h2>
+          <div class="dashboard-stats">
+            <div class="stat-card">
+              <h3>Active Bots</h3>
+              <p id="active-bots-count">0</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Bots</h3>
+              <p id="total-bots-count">0</p>
+            </div>
+            <div class="stat-card">
+              <h3>Platforms</h3>
+              <p id="platforms-count">0</p>
+            </div>
+          </div>
+          
+          <div class="control-panel">
+            <h3>Control Panel</h3>
+            <div class="control-buttons">
+              <button id="start-all-btn" class="primary-button">Start All Bots</button>
+              <button id="stop-all-btn" class="secondary-button">Stop All Bots</button>
+            </div>
+            <div class="director-mode">
+              <h4>Director Mode</h4>
+              <textarea id="director-command" placeholder="Enter a command for all bots..."></textarea>
+              <button id="send-command-btn" class="primary-button">Send Command</button>
+            </div>
+          </div>
+          
+          <div class="logs-panel">
+            <h3>Logs</h3>
+            <div id="logs-container" class="logs-container"></div>
+            <button id="clear-logs-btn" class="secondary-button">Clear Logs</button>
+          </div>
+        </div>
+        
+        <!-- Bots View -->
+        <div id="bots-view" class="view" style="display: none;">
+          <h2>Bots</h2>
+          <button id="add-bot-btn" class="primary-button">Add New Bot</button>
+          
+          <div id="bots-list" class="bots-list">
+            <!-- Bots will be added here dynamically -->
+          </div>
+          
+          <!-- Add Bot Modal -->
+          <div id="add-bot-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+              <span class="close-modal">&times;</span>
+              <h3>Add New Bot</h3>
+              <div class="form-group">
+                <label for="bot-name">Bot Name</label>
+                <input type="text" id="bot-name" placeholder="Enter bot name">
+              </div>
+              <div class="form-group">
+                <label for="bot-platform">Platform</label>
+                <select id="bot-platform">
+                  <option value="youtube">YouTube</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="xcom">X.com</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="bot-username">Username</label>
+                <input type="text" id="bot-username" placeholder="Enter bot username">
+              </div>
+              <div class="form-group">
+                <label for="bot-password">Password</label>
+                <input type="password" id="bot-password" placeholder="Enter bot password">
+              </div>
+              <div class="form-group">
+                <label for="bot-persona">Persona</label>
+                <textarea id="bot-persona" placeholder="Describe the bot's personality..."></textarea>
+              </div>
+              <div class="form-group">
+                <label for="bot-gender">Voice Gender</label>
+                <select id="bot-gender">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="neutral">Neutral</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button id="save-bot-btn" class="primary-button">Save Bot</button>
+                <button class="secondary-button close-modal">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Settings View -->
+        <div id="settings-view" class="view" style="display: none;">
+          <h2>Settings</h2>
+          
+          <div class="settings-section">
+            <h3>General Settings</h3>
+            <div class="form-group">
+              <label for="dark-mode">Dark Mode</label>
+              <input type="checkbox" id="dark-mode">
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h3>API Keys</h3>
+            <div class="form-group">
+              <label for="openai-api-key">OpenAI API Key</label>
+              <input type="password" id="openai-api-key" placeholder="Enter your OpenAI API key">
+            </div>
+            <div class="form-group">
+              <label for="elevenlabs-api-key">ElevenLabs API Key</label>
+              <input type="password" id="elevenlabs-api-key" placeholder="Enter your ElevenLabs API key">
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button id="save-settings-btn" class="primary-button">Save Settings</button>
+          </div>
+        </div>
+      </main>
+      
+      <footer>
+        <p>&copy; 2025 bots.pm - All rights reserved</p>
+      </footer>
+    </div>
+  </div>
+  
+  <script src="app.js" type="module"></script>
+</body>
+</html>

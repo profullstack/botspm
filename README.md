@@ -48,8 +48,8 @@ For a complete list of features, see [FEATURES.md](FEATURES.md).
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/botspm.git
-   cd botspm
+   git clone https://github.com/yourusername/bots.pm.git
+   cd bots.pm
    ```
 
 2. Install dependencies:
@@ -101,7 +101,7 @@ For a complete list of features, see [FEATURES.md](FEATURES.md).
 ### Project Structure
 
 ```
-botspm/
+bots.pm/
 ├── assets/            # Application assets (icons, images)
 ├── bin/               # Binary scripts
 ├── data/              # Application data storage
@@ -136,7 +136,7 @@ To create a new release with binaries for all platforms:
    ```
    GITHUB_TOKEN=your_github_personal_access_token
    REPO_OWNER=yourusername
-   REPO_NAME=botspm
+   REPO_NAME=bots.pm
    ```
 3. Run the release script:
    ```bash
