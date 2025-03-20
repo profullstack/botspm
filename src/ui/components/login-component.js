@@ -18,22 +18,23 @@ class LoginComponent extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
+          display: flex;
+          justify-content: center;
+          align-items: center;
           width: 100%;
-          height: 100%;
+          height: 100vh;
           background-color: var(--background-color, #f8f9fa);
+          padding: 20px;
+          box-sizing: border-box;
         }
         
         .login-container {
+          width: 100%;
           max-width: 400px;
-          margin: 0 auto;
           padding: 2rem;
           background-color: var(--card-background, #ffffff);
           border-radius: var(--border-radius-md, 0.5rem);
           box-shadow: 0 4px 6px var(--shadow-color, rgba(0, 0, 0, 0.1));
-          position: relative;
-          top: 50%;
-          transform: translateY(-50%);
         }
         
         .app-logo {
@@ -78,6 +79,7 @@ class LoginComponent extends HTMLElement {
           color: var(--text-color, #212529);
           font-size: 1rem;
           transition: border-color 0.2s, box-shadow 0.2s;
+          box-sizing: border-box;
         }
         
         .form-group input:focus {
@@ -147,7 +149,7 @@ class LoginComponent extends HTMLElement {
       
       <div class="login-container">
         <div class="app-logo">
-          <img src="../assets/logo.svg" alt="bots.pm Logo">
+          <img src="/public/images/logo.svg" alt="bots.pm Logo">
           <h1>bots.pm</h1>
           <p>Manage your AI bots across multiple platforms</p>
         </div>

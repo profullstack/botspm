@@ -20,15 +20,20 @@ class SetupComponent extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
+          display: flex;
+          justify-content: center;
+          align-items: center;
           width: 100%;
           height: 100vh;
           font-family: Arial, sans-serif;
+          background-color: var(--background-color, #f8f9fa);
+          padding: 20px;
+          box-sizing: border-box;
         }
         
         .setup-container {
+          width: 100%;
           max-width: 800px;
-          margin: 0 auto;
           padding: 2rem;
           background-color: var(--card-background, #ffffff);
           border-radius: var(--border-radius-lg, 0.5rem);
@@ -127,6 +132,7 @@ class SetupComponent extends HTMLElement {
           font-size: 1rem;
           background-color: var(--input-bg, #fff);
           color: var(--text-color, #333);
+          box-sizing: border-box;
         }
         
         .form-group textarea {
@@ -228,7 +234,7 @@ class SetupComponent extends HTMLElement {
       
       <div class="setup-container">
         <div class="setup-header">
-          <img src="../../assets/logo.svg" alt="bots.pm Logo" class="logo">
+          <img src="/public/images/logo.svg" alt="bots.pm Logo" class="logo">
           <h1>Welcome to bots.pm</h1>
           <p>Let's set up your environment to get started</p>
         </div>

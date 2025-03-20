@@ -8,7 +8,7 @@ import apiClient from './api-client.js';
 
 // Application state
 let appConfig = null;
-let darkMode = false;
+let darkMode = true; // Default to dark mode
 let activeBots = [];
 let commandHistory = [];
 let activeSession = null;
@@ -59,7 +59,7 @@ async function initializeApp() {
     
     // Check for dark mode preference
     const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    darkMode = localStorage.getItem('darkMode') === 'true' || systemPrefersDark;
+    darkMode = localStorage.getItem('darkMode') === 'false' ? false : true; // Default to true unless explicitly set to false
     updateDarkMode();
     
     // Setup IPC event listeners
