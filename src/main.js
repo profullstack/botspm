@@ -9,8 +9,6 @@ import electronLog from 'electron-log';
 import Store from 'electron-store';
 import dotenv from 'dotenv';
 import { masterProcess } from './master.js';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import CryptoJS from 'crypto-js';
 
 // Load environment variables
@@ -47,77 +45,173 @@ let db;
  */
 async function initDatabase() {
   try {
+    const configPath = path.join(app.getPath('userData'), 'config.json');
+    let config;
+    
+    try {
+      const configFile = await fs.readFile(configPath, 'utf8');
+      config = JSON.parse(configFile);
+    } catch (error) {
+      electronLog.error('Failed to load config:', error);
+      config = { DATABASE_ENGINE: 'better-sqlite3' }; // Default to better-sqlite3 if config can't be loaded
+    }
+    
+    const dbEngine = config.DATABASE_ENGINE || 'better-sqlite3';
     const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
     
     // Ensure directory exists
     await fs.mkdir(path.dirname(dbPath), { recursive: true });
     
-    // Open database
-    db = await open({
-      filename: dbPath,
-      driver: sqlite3.Database
-    });
-    
-    // Create tables if they don't exist
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS user_settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        key TEXT NOT NULL,
-        value TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        UNIQUE(user_id, key)
-      )
-    `);
-    
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS bot_accounts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        bot_name TEXT NOT NULL,
-        platform TEXT NOT NULL,
-        username TEXT,
-        password TEXT,
-        signup_url TEXT,
-        stream_key TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        UNIQUE(user_id, bot_name, platform)
-      )
-    `);
-    
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS bot_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        bot_id INTEGER NOT NULL,
-        input TEXT,
-        response TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (bot_id) REFERENCES bot_accounts(id)
-      )
-    `);
-    
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS director_commands (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        command TEXT NOT NULL,
-        applied BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
+    // Open database based on configured engine
+    if (dbEngine === 'sqlite3') {
+      electronLog.info('Using sqlite3 database engine');
+      try {
+        // Import sqlite3 with dynamic import
+        const { default: sqlite3 } = await import('sqlite3');
+        const { open } = await import('sqlite');
+        
+        db = await open({
+          filename: dbPath,
+          driver: sqlite3.Database
+        });
+        
+        // Create tables if they don't exist
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS user_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, key)
+          )
+        `);
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            bot_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            username TEXT,
+            password TEXT,
+            signup_url TEXT,
+            stream_key TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, bot_name, platform)
+          )
+        `);
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bot_id INTEGER NOT NULL,
+            input TEXT,
+            response TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (bot_id) REFERENCES bot_accounts(id)
+          )
+        `);
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS director_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            command TEXT NOT NULL,
+            applied BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `);
+      } catch (error) {
+        electronLog.error('Failed to initialize sqlite3:', error);
+        throw new Error(`Failed to initialize sqlite3: ${error.message}`);
+      }
+    } else {
+      electronLog.info('Using better-sqlite3 database engine');
+      try {
+        // Import better-sqlite3 with dynamic import
+        const { default: BetterSQLite3 } = await import('better-sqlite3');
+        
+        db = new BetterSQLite3(dbPath, { verbose: electronLog.info });
+        
+        // Create tables if they don't exist
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS user_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, key)
+          )
+        `);
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            bot_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            username TEXT,
+            password TEXT,
+            signup_url TEXT,
+            stream_key TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, bot_name, platform)
+          )
+        `);
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bot_id INTEGER NOT NULL,
+            input TEXT,
+            response TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (bot_id) REFERENCES bot_accounts(id)
+          )
+        `);
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS director_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            command TEXT NOT NULL,
+            applied BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `);
+      } catch (error) {
+        electronLog.error('Failed to initialize better-sqlite3:', error);
+        throw new Error(`Failed to initialize better-sqlite3: ${error.message}`);
+      }
+    }
     
     electronLog.info('Database initialized successfully');
   } catch (error) {
@@ -309,7 +403,16 @@ function stopAllBots() {
 // User authentication functions
 async function authenticateUser(username, password) {
   try {
-    const user = await db.get('SELECT id, username, password FROM users WHERE username = ?', username);
+    let user;
+    
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      user = db.prepare('SELECT id, username, password FROM users WHERE username = ?').get(username);
+    } else {
+      // sqlite3
+      user = await db.get('SELECT id, username, password FROM users WHERE username = ?', username);
+    }
     
     if (!user) {
       return { success: false, message: 'User not found' };
@@ -332,8 +435,16 @@ async function authenticateUser(username, password) {
 
 async function registerUser(username, password) {
   try {
-    // Check if username already exists
-    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', username);
+    let existingUser;
+    
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    } else {
+      // sqlite3
+      existingUser = await db.get('SELECT id FROM users WHERE username = ?', username);
+    }
     
     if (existingUser) {
       return { success: false, message: 'Username already exists' };
@@ -342,14 +453,18 @@ async function registerUser(username, password) {
     // Hash password with CryptoJS
     const hashedPassword = CryptoJS.SHA256(password).toString();
     
-    // Insert new user
-    const result = await db.run(
-      'INSERT INTO users (username, password) VALUES (?, ?)',
-      username,
-      hashedPassword
-    );
+    let result;
     
-    return { success: true, userId: result.lastID };
+    // Insert new user
+    if (db.prepare) {
+      // better-sqlite3
+      result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
+      return { success: true, userId: result.lastInsertRowid };
+    } else {
+      // sqlite3
+      result = await db.run('INSERT INTO users (username, password) VALUES (?, ?)', username, hashedPassword);
+      return { success: true, userId: result.lastID };
+    }
   } catch (error) {
     electronLog.error('Registration error:', error);
     return { success: false, message: error.message };
@@ -358,25 +473,49 @@ async function registerUser(username, password) {
 
 async function saveUserSettings(userId, settings) {
   try {
-    // Begin transaction
-    await db.run('BEGIN TRANSACTION');
-    
-    for (const [key, value] of Object.entries(settings)) {
-      if (value !== undefined && value !== null) {
-        await db.run(
-          'INSERT OR REPLACE INTO user_settings (user_id, key, value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-          userId,
-          key,
-          value
-        );
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      db.prepare('BEGIN TRANSACTION').run();
+      
+      const stmt = db.prepare('INSERT OR REPLACE INTO user_settings (user_id, key, value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)');
+      
+      for (const [key, value] of Object.entries(settings)) {
+        if (value !== undefined && value !== null) {
+          stmt.run(userId, key, value);
+        }
       }
+      
+      db.prepare('COMMIT').run();
+    } else {
+      // sqlite3
+      await db.run('BEGIN TRANSACTION');
+      
+      for (const [key, value] of Object.entries(settings)) {
+        if (value !== undefined && value !== null) {
+          await db.run(
+            'INSERT OR REPLACE INTO user_settings (user_id, key, value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+            userId,
+            key,
+            value
+          );
+        }
+      }
+      
+      await db.run('COMMIT');
     }
-    
-    await db.run('COMMIT');
     
     return { success: true };
   } catch (error) {
-    await db.run('ROLLBACK');
+    // Rollback transaction on error
+    if (db.prepare) {
+      // better-sqlite3
+      db.prepare('ROLLBACK').run();
+    } else {
+      // sqlite3
+      await db.run('ROLLBACK');
+    }
+    
     electronLog.error('Save settings error:', error);
     return { success: false, message: error.message };
   }
@@ -384,7 +523,16 @@ async function saveUserSettings(userId, settings) {
 
 async function getUserSettings(userId) {
   try {
-    const rows = await db.all('SELECT key, value FROM user_settings WHERE user_id = ?', userId);
+    let rows;
+    
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      rows = db.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').all(userId);
+    } else {
+      // sqlite3
+      rows = await db.all('SELECT key, value FROM user_settings WHERE user_id = ?', userId);
+    }
     
     const settings = {};
     rows.forEach(row => {
@@ -400,11 +548,24 @@ async function getUserSettings(userId) {
 
 async function getBotsByUser(userId) {
   try {
-    const bots = await db.all(`
-      SELECT id, bot_name, platform, username, stream_key 
-      FROM bot_accounts 
-      WHERE user_id = ?
-    `, userId);
+    let bots;
+    
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      bots = db.prepare(`
+        SELECT id, bot_name, platform, username, stream_key 
+        FROM bot_accounts 
+        WHERE user_id = ?
+      `).all(userId);
+    } else {
+      // sqlite3
+      bots = await db.all(`
+        SELECT id, bot_name, platform, username, stream_key 
+        FROM bot_accounts 
+        WHERE user_id = ?
+      `, userId);
+    }
     
     return bots;
   } catch (error) {
@@ -415,20 +576,42 @@ async function getBotsByUser(userId) {
 
 async function createBot(userId, botData) {
   try {
-    const result = await db.run(`
-      INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
-      userId,
-      botData.name,
-      botData.platform,
-      botData.username,
-      botData.password,
-      botData.signupUrl,
-      botData.streamKey
-    );
+    let result;
     
-    return { success: true, botId: result.lastID };
+    // Check if we're using sqlite3 or better-sqlite3
+    if (db.prepare) {
+      // better-sqlite3
+      result = db.prepare(`
+        INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        userId,
+        botData.name,
+        botData.platform,
+        botData.username,
+        botData.password,
+        botData.signupUrl,
+        botData.streamKey
+      );
+      
+      return { success: true, botId: result.lastInsertRowid };
+    } else {
+      // sqlite3
+      result = await db.run(`
+        INSERT INTO bot_accounts (user_id, bot_name, platform, username, password, signup_url, stream_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+        userId,
+        botData.name,
+        botData.platform,
+        botData.username,
+        botData.password,
+        botData.signupUrl,
+        botData.streamKey
+      );
+      
+      return { success: true, botId: result.lastID };
+    }
   } catch (error) {
     electronLog.error('Create bot error:', error);
     return { success: false, message: error.message };
@@ -535,7 +718,9 @@ app.on('quit', () => {
   
   // Close database connection
   if (db) {
-    db.close();
+    if (typeof db.close === 'function') {
+      db.close();
+    }
   }
 });
 

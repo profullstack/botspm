@@ -76,16 +76,18 @@
     "electron-log": "^5.0.1",
     "electron-store": "^8.1.0",
     "node-fetch": "^3.3.2",
-    "prebuild-install": "^7.1.1",
     "puppeteer-core": "^21.5.0",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.6",
     "winston": "^3.11.0"
   },
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^24.6.4",
     "nodemon": "^3.0.1"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^8.6.0",
+    "sqlite3": "^5.1.6"
   },
   "engines": {
     "node": ">=16.0.0 <21.0.0"

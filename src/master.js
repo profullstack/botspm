@@ -1,8 +1,6 @@
 // master.js - Master process managing multiple AI bots for multi-platform lives (YouTube, X.com, TikTok) with auto-platform setup, credential handling, automated account creation, and CLI-based director commands
 
 import { spawn } from 'child_process';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import puppeteer from 'puppeteer-core';
 import fetch from 'node-fetch';
 import readline from 'readline';
@@ -38,6 +36,7 @@ async function loadConfig(providedConfig = null) {
     // If config file doesn't exist, create it with default values
     const defaultConfig = {
       DATABASE_PATH: path.join(app.getPath('userData'), 'bots.sqlite'),
+      DATABASE_ENGINE: 'better-sqlite3',
       STATIC_BACKGROUND_PATH: path.join(app.getPath('userData'), 'static_background.png'),
       LOG_LEVEL: 'info',
       PLATFORMS: [
@@ -302,74 +301,150 @@ function spawnFfmpeg(streamKey, ffmpegOptions, backgroundPath, logger) {
  * @param {string} dbPath - Path to the database file
  * @param {Array} botsConfig - Bot configurations
  * @param {Object} logger - Winston logger instance
+ * @param {string} dbEngine - Database engine to use ('sqlite3' or 'better-sqlite3')
  * @returns {Promise<Object>} Database connection
  */
-async function setupDatabase(dbPath, botsConfig, logger) {
+async function setupDatabase(dbPath, botsConfig, logger, dbEngine = 'better-sqlite3') {
   try {
-    logger.info(`Setting up database at ${dbPath}`);
+    logger.info(`Setting up database at ${dbPath} using ${dbEngine} engine`);
     
     // Ensure directory exists
     const dbDir = path.dirname(dbPath);
     await fs.mkdir(dbDir, { recursive: true });
     
-    // Open database
-    const db = await open({
-      filename: dbPath,
-      driver: sqlite3.Database
-    });
+    let db;
     
-    // Create tables if they don't exist
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS bot_logs (
-        id INTEGER PRIMARY KEY, 
-        bot_name TEXT, 
-        gender TEXT, 
-        platform TEXT, 
-        input TEXT, 
-        response TEXT, 
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS bot_accounts (
-        id INTEGER PRIMARY KEY, 
-        bot_name TEXT, 
-        platform TEXT, 
-        username TEXT, 
-        password TEXT, 
-        signup_url TEXT,
-        stream_key TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(bot_name, platform)
-      )
-    `);
-    
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS director_commands (
-        id INTEGER PRIMARY KEY,
-        command TEXT,
-        applied BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    // Insert or update bot accounts
-    const stmt = await db.prepare(`
-      INSERT OR REPLACE INTO bot_accounts 
-      (bot_name, platform, username, password, signup_url, stream_key) 
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    
-    for (const bot of botsConfig) {
-      await stmt.run(
-        bot.name, 
-        bot.platform, 
-        bot.username, 
-        bot.password, 
-        bot.signupUrl, 
-        bot.streamKey
-      );
+    // Open database based on configured engine
+    if (dbEngine === 'sqlite3') {
+      try {
+        // Import sqlite3 with dynamic import
+        const { default: sqlite3 } = await import('sqlite3');
+        const { open } = await import('sqlite');
+        
+        db = await open({
+          filename: dbPath,
+          driver: sqlite3.Database
+        });
+        
+        // Create tables if they don't exist
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_logs (
+            id INTEGER PRIMARY KEY, 
+            bot_name TEXT, 
+            gender TEXT, 
+            platform TEXT, 
+            input TEXT, 
+            response TEXT, 
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_accounts (
+            id INTEGER PRIMARY KEY, 
+            bot_name TEXT, 
+            platform TEXT, 
+            username TEXT, 
+            password TEXT, 
+            signup_url TEXT,
+            stream_key TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bot_name, platform)
+          )
+        `);
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS director_commands (
+            id INTEGER PRIMARY KEY,
+            command TEXT,
+            applied BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        // Insert or update bot accounts
+        for (const bot of botsConfig) {
+          await db.run(`
+            INSERT OR REPLACE INTO bot_accounts 
+            (bot_name, platform, username, password, signup_url, stream_key) 
+            VALUES (?, ?, ?, ?, ?, ?)
+          `,
+            bot.name, 
+            bot.platform, 
+            bot.username, 
+            bot.password, 
+            bot.signupUrl, 
+            bot.streamKey
+          );
+        }
+      } catch (error) {
+        logger.error('Failed to initialize sqlite3:', error);
+        throw new Error(`Failed to initialize sqlite3: ${error.message}`);
+      }
+    } else {
+      try {
+        // Import better-sqlite3 with dynamic import
+        const { default: BetterSQLite3 } = await import('better-sqlite3');
+        
+        db = new BetterSQLite3(dbPath, { verbose: logger.debug });
+        
+        // Create tables if they don't exist
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_logs (
+            id INTEGER PRIMARY KEY, 
+            bot_name TEXT, 
+            gender TEXT, 
+            platform TEXT, 
+            input TEXT, 
+            response TEXT, 
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS bot_accounts (
+            id INTEGER PRIMARY KEY, 
+            bot_name TEXT, 
+            platform TEXT, 
+            username TEXT, 
+            password TEXT, 
+            signup_url TEXT,
+            stream_key TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bot_name, platform)
+          )
+        `);
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS director_commands (
+            id INTEGER PRIMARY KEY,
+            command TEXT,
+            applied BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        // Insert or update bot accounts
+        const stmt = db.prepare(`
+          INSERT OR REPLACE INTO bot_accounts 
+          (bot_name, platform, username, password, signup_url, stream_key) 
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        
+        for (const bot of botsConfig) {
+          stmt.run(
+            bot.name, 
+            bot.platform, 
+            bot.username, 
+            bot.password, 
+            bot.signupUrl, 
+            bot.streamKey
+          );
+        }
+      } catch (error) {
+        logger.error('Failed to initialize better-sqlite3:', error);
+        throw new Error(`Failed to initialize better-sqlite3: ${error.message}`);
+      }
     }
     
     logger.info('Database setup completed');
@@ -389,14 +464,24 @@ async function setupDatabase(dbPath, botsConfig, logger) {
  * @param {string} input - User input
  * @param {string} response - Bot response
  * @param {Object} logger - Winston logger instance
+ * @param {string} dbEngine - Database engine being used
  * @returns {Promise<void>}
  */
-async function storeBotInteraction(db, botName, gender, platform, input, response, logger) {
+async function storeBotInteraction(db, botName, gender, platform, input, response, logger, dbEngine = 'better-sqlite3') {
   try {
-    await db.run(`
-      INSERT INTO bot_logs (bot_name, gender, platform, input, response) 
-      VALUES (?, ?, ?, ?, ?)
-    `, botName, gender, platform, input, response);
+    if (dbEngine === 'sqlite3') {
+      await db.run(`
+        INSERT INTO bot_logs (bot_name, gender, platform, input, response) 
+        VALUES (?, ?, ?, ?, ?)
+      `, botName, gender, platform, input, response);
+    } else {
+      const stmt = db.prepare(`
+        INSERT INTO bot_logs (bot_name, gender, platform, input, response) 
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      
+      stmt.run(botName, gender, platform, input, response);
+    }
     
     logger.debug(`Stored interaction for ${botName}`);
   } catch (error) {
@@ -524,9 +609,10 @@ async function pipeAudioBufferToFfmpeg(ffmpegStdin, buffer, logger) {
  * @param {Object} db - Database connection
  * @param {Array} directorCommands - Director commands array
  * @param {Object} logger - Winston logger instance
+ * @param {string} dbEngine - Database engine being used
  * @returns {Object} Readline interface
  */
-function startDirectorCLI(db, directorCommands, logger) {
+function startDirectorCLI(db, directorCommands, logger, dbEngine = 'better-sqlite3') {
   const rl = readline.createInterface({ 
     input: process.stdin, 
     output: process.stdout,
@@ -543,7 +629,12 @@ function startDirectorCLI(db, directorCommands, logger) {
       directorCommands.push(message);
       
       try {
-        await db.run('INSERT INTO director_commands (command) VALUES (?)', message);
+        if (dbEngine === 'sqlite3') {
+          await db.run('INSERT INTO director_commands (command) VALUES (?)', message);
+        } else {
+          const stmt = db.prepare('INSERT INTO director_commands (command) VALUES (?)');
+          stmt.run(message);
+        }
         logger.info(`Director instruction added: ${message}`);
       } catch (error) {
         logger.error(`Failed to store director command: ${error.message}`);
@@ -561,7 +652,13 @@ Available commands:
       `);
     } else if (trimmedLine === '--list') {
       try {
-        const bots = await db.all('SELECT bot_name, platform FROM bot_accounts');
+        let bots;
+        if (dbEngine === 'sqlite3') {
+          bots = await db.all('SELECT bot_name, platform FROM bot_accounts');
+        } else {
+          bots = db.prepare('SELECT bot_name, platform FROM bot_accounts').all();
+        }
+        
         console.log('\nActive bots:');
         bots.forEach(bot => {
           console.log(`- ${bot.bot_name} on ${bot.platform}`);
@@ -573,10 +670,17 @@ Available commands:
     } else if (trimmedLine.startsWith('--history ')) {
       const botName = trimmedLine.replace('--history ', '');
       try {
-        const logs = await db.all(
-          'SELECT input, response, created_at FROM bot_logs WHERE bot_name = ? ORDER BY created_at DESC LIMIT 5',
-          botName
-        );
+        let logs;
+        if (dbEngine === 'sqlite3') {
+          logs = await db.all(
+            'SELECT input, response, created_at FROM bot_logs WHERE bot_name = ? ORDER BY created_at DESC LIMIT 5',
+            botName
+          );
+        } else {
+          logs = db.prepare(
+            'SELECT input, response, created_at FROM bot_logs WHERE bot_name = ? ORDER BY created_at DESC LIMIT 5'
+          ).all(botName);
+        }
         
         if (logs.length === 0) {
           console.log(`No history found for bot ${botName}`);
@@ -618,8 +722,12 @@ export async function masterProcess(providedConfig = null) {
     const logger = createLogger(config);
     logger.level = config.LOG_LEVEL || 'info';
     
+    // Get database engine from config
+    const dbEngine = config.DATABASE_ENGINE || 'better-sqlite3';
+    logger.info(`Using ${dbEngine} database engine`);
+    
     // Setup database
-    const db = await setupDatabase(config.DATABASE_PATH, [], logger);
+    const db = await setupDatabase(config.DATABASE_PATH, [], logger, dbEngine);
     
     // Process bot personalities and platforms
     const directorCommands = [];
@@ -659,7 +767,7 @@ export async function masterProcess(providedConfig = null) {
     });
     
     // Start director CLI
-    const cli = startDirectorCLI(db, directorCommands, logger);
+    const cli = startDirectorCLI(db, directorCommands, logger, dbEngine);
     
     // Create a master process object that can be controlled externally
     const masterObj = {
@@ -668,12 +776,18 @@ export async function masterProcess(providedConfig = null) {
       db,
       logger,
       cli,
+      dbEngine,
       
       // Method to add a director command
       addDirectorCommand: async (command) => {
         directorCommands.push(command);
         try {
-          await db.run('INSERT INTO director_commands (command) VALUES (?)', command);
+          if (dbEngine === 'sqlite3') {
+            await db.run('INSERT INTO director_commands (command) VALUES (?)', command);
+          } else {
+            const stmt = db.prepare('INSERT INTO director_commands (command) VALUES (?)');
+            stmt.run(command);
+          }
           logger.info(`Director instruction added: ${command}`);
           return true;
         } catch (error) {
@@ -696,7 +810,11 @@ export async function masterProcess(providedConfig = null) {
         
         // Close database
         if (db) {
-          db.close();
+          if (dbEngine === 'sqlite3') {
+            db.close();
+          } else if (typeof db.close === 'function') {
+            db.close();
+          }
         }
         
         logger.info('Master process stopped');
@@ -713,9 +831,16 @@ export async function masterProcess(providedConfig = null) {
             gender: bot.gender
           }));
           
-          const recentCommands = await db.all(
-            'SELECT command, created_at FROM director_commands ORDER BY created_at DESC LIMIT 10'
-          );
+          let recentCommands;
+          if (dbEngine === 'sqlite3') {
+            recentCommands = await db.all(
+              'SELECT command, created_at FROM director_commands ORDER BY created_at DESC LIMIT 10'
+            );
+          } else {
+            recentCommands = db.prepare(
+              'SELECT command, created_at FROM director_commands ORDER BY created_at DESC LIMIT 10'
+            ).all();
+          }
           
           return {
             bots: botStatus,
@@ -760,7 +885,8 @@ export async function masterProcess(providedConfig = null) {
                 bot.platform, 
                 audioInput, 
                 gptReply,
-                logger
+                logger,
+                dbEngine
               );
             }
           } catch (error) {

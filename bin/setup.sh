@@ -43,24 +43,39 @@ rm -rf .pnpm-store
 rm -f package-lock.json
 rm -f pnpm-lock.yaml
 
+# Read config.json to determine which database engine to use
+DB_ENGINE="sqlite3"
+if [ -f "config.json" ]; then
+  if grep -q "DATABASE_ENGINE" config.json; then
+    DB_ENGINE=$(grep -o '"DATABASE_ENGINE"[^,]*' config.json | grep -o '[^:]*$' | tr -d ' "')
+  fi
+fi
+
+echo -e "${GREEN}Using database engine: ${DB_ENGINE}${NC}"
+
+# Set environment variables to help with native module installation
+export npm_config_build_from_source=true
+export ELECTRON_SKIP_BINARY_DOWNLOAD=1
+export SQLITE3_BINARY_SITE="https://mapbox-node-binary.s3.amazonaws.com"
+
 # Install dependencies with pnpm
 echo -e "${GREEN}Installing dependencies with pnpm...${NC}"
 
-# First install prebuild-install globally to ensure it's available
-echo -e "${GREEN}Installing prebuild-install globally...${NC}"
-pnpm add -g prebuild-install
-
 # Install dependencies with --shamefully-hoist to make binaries available
 echo -e "${GREEN}Installing project dependencies...${NC}"
-ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --shamefully-hoist --no-frozen-lockfile
+pnpm install --shamefully-hoist --no-frozen-lockfile -w
 
-# Install electron separately to avoid issues
-echo -e "${GREEN}Installing Electron...${NC}"
-pnpm add electron@28.0.0 --save-dev -w
-
-# Install sqlite3 with specific flags to avoid native build issues
-echo -e "${GREEN}Installing sqlite3...${NC}"
-pnpm add sqlite3 --build-from-source -w
+# Install the specific database engine
+if [ "$DB_ENGINE" = "sqlite3" ]; then
+  echo -e "${GREEN}Installing sqlite3...${NC}"
+  pnpm add sqlite3 sqlite -w
+elif [ "$DB_ENGINE" = "better-sqlite3" ]; then
+  echo -e "${GREEN}Installing better-sqlite3...${NC}"
+  pnpm add better-sqlite3 -w
+else
+  echo -e "${YELLOW}Unknown database engine: ${DB_ENGINE}. Installing both sqlite3 and better-sqlite3...${NC}"
+  pnpm add sqlite3 sqlite better-sqlite3 -w
+fi
 
 # Fix Electron installation if needed
 if [ ! -f "node_modules/.pnpm/electron@28.0.0*/node_modules/electron/dist/electron" ] && [ ! -f "node_modules/electron/dist/electron" ]; then
