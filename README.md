@@ -127,6 +127,27 @@ pnpm build
 
 This will create platform-specific builds in the `dist` directory.
 
+### Releasing
+
+To create a new release with binaries for all platforms:
+
+1. Update the version in `package.json`
+2. Ensure your `.env` file contains GitHub credentials:
+   ```
+   GITHUB_TOKEN=your_github_personal_access_token
+   REPO_OWNER=yourusername
+   REPO_NAME=botspm
+   ```
+3. Run the release script:
+   ```bash
+   pnpm release
+   ```
+
+This will:
+- Build the application for Windows, macOS, and Linux
+- Create a GitHub release with the current version
+- Upload all binaries to the release
+
 ### Testing
 
 To run tests:
