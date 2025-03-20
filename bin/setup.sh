@@ -56,7 +56,9 @@ echo -e "${GREEN}Using database engine: ${DB_ENGINE}${NC}"
 # Set environment variables to help with native module installation
 export npm_config_build_from_source=true
 export ELECTRON_SKIP_BINARY_DOWNLOAD=1
-export SQLITE3_BINARY_SITE="https://mapbox-node-binary.s3.amazonaws.com"
+
+# Use TryGhost's node-sqlite3 releases instead of Mapbox
+export SQLITE3_BINARY_SITE="https://github.com/TryGhost/node-sqlite3/releases/download"
 
 # Install dependencies with pnpm
 echo -e "${GREEN}Installing dependencies with pnpm...${NC}"
@@ -67,14 +69,34 @@ pnpm install --shamefully-hoist --no-frozen-lockfile -w
 
 # Install the specific database engine
 if [ "$DB_ENGINE" = "sqlite3" ]; then
-  echo -e "${GREEN}Installing sqlite3...${NC}"
-  pnpm add sqlite3 sqlite -w
+  echo -e "${GREEN}Installing sqlite3 from TryGhost repository...${NC}"
+  
+  # Get the latest version from TryGhost/node-sqlite3
+  SQLITE3_VERSION=$(curl -s https://api.github.com/repos/TryGhost/node-sqlite3/releases/latest | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$')
+  
+  if [ -z "$SQLITE3_VERSION" ]; then
+    echo -e "${YELLOW}Could not determine latest sqlite3 version. Using default.${NC}"
+    pnpm add sqlite3 sqlite -w
+  else
+    echo -e "${GREEN}Using sqlite3 version: ${SQLITE3_VERSION}${NC}"
+    pnpm add sqlite3@${SQLITE3_VERSION} sqlite -w
+  fi
 elif [ "$DB_ENGINE" = "better-sqlite3" ]; then
   echo -e "${GREEN}Installing better-sqlite3...${NC}"
   pnpm add better-sqlite3 -w
 else
   echo -e "${YELLOW}Unknown database engine: ${DB_ENGINE}. Installing both sqlite3 and better-sqlite3...${NC}"
-  pnpm add sqlite3 sqlite better-sqlite3 -w
+  
+  # Get the latest version from TryGhost/node-sqlite3
+  SQLITE3_VERSION=$(curl -s https://api.github.com/repos/TryGhost/node-sqlite3/releases/latest | grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$')
+  
+  if [ -z "$SQLITE3_VERSION" ]; then
+    echo -e "${YELLOW}Could not determine latest sqlite3 version. Using default.${NC}"
+    pnpm add sqlite3 sqlite better-sqlite3 -w
+  else
+    echo -e "${GREEN}Using sqlite3 version: ${SQLITE3_VERSION}${NC}"
+    pnpm add sqlite3@${SQLITE3_VERSION} sqlite better-sqlite3 -w
+  fi
 fi
 
 # Fix Electron installation if needed

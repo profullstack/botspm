@@ -1,5 +1,18 @@
 # bots.pm Features
 
+![bots.pm Logo](assets/logo.svg)
+
+[![Electron](https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=fff&style=for-the-badge)](https://www.electronjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=fff&style=for-the-badge)](https://nodejs.org/)
+[![Web Components](https://img.shields.io/badge/Web%20Components-29ABE2?logo=webcomponents.org&logoColor=fff&style=for-the-badge)](https://www.webcomponents.org/)
+[![Puppeteer](https://img.shields.io/badge/Puppeteer-40B5A4?logo=puppeteer&logoColor=fff&style=for-the-badge)](https://pptr.dev/)
+[![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=fff&style=for-the-badge)](https://www.sqlite.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=fff&style=for-the-badge)](https://pnpm.io/)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?logo=ffmpeg&logoColor=fff&style=for-the-badge)](https://ffmpeg.org/)
+[![Winston](https://img.shields.io/badge/Winston-231F20?logo=winston&logoColor=fff&style=for-the-badge)](https://github.com/winstonjs/winston)
+[![dotenv](https://img.shields.io/badge/dotenv-ECD53F?logo=dotenv&logoColor=000&style=for-the-badge)](https://github.com/motdotla/dotenv)
+[![CryptoJS](https://img.shields.io/badge/CryptoJS-000000?logo=crypto&logoColor=fff&style=for-the-badge)](https://github.com/brix/crypto-js)
+
 bots.pm is a desktop application for managing multiple AI bots across streaming platforms. This document outlines the key features and capabilities of the application.
 
 ## 🤖 Bot Management
