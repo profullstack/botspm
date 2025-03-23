@@ -1,6 +1,6 @@
 # bots.pm Features
 
-![bots.pm Logo](assets/logo.svg)
+![bots.pm Logo](public/logo.bots.black.svg)
 
 [![Electron](https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=fff&style=for-the-badge)](https://www.electronjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=fff&style=for-the-badge)](https://nodejs.org/)

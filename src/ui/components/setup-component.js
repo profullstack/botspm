@@ -19,13 +19,37 @@ class SetupComponent extends HTMLElement {
   render() {
     this.shadowRoot.innerHTML = `
       <style>
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+          src: url('/public/fonts/inter/inter-regular.woff2') format('woff2');
+        }
+        
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 500;
+          font-display: swap;
+          src: url('/public/fonts/inter/inter-medium.woff2') format('woff2');
+        }
+        
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 700;
+          font-display: swap;
+          src: url('/public/fonts/inter/inter-bold.woff2') format('woff2');
+        }
+        
         :host {
           display: flex;
           justify-content: center;
           align-items: center;
           width: 100%;
           height: 100vh;
-          font-family: var(--font-family-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
           background-color: var(--background-color, #f8f9fa);
           padding: 20px;
           box-sizing: border-box;
@@ -234,7 +258,7 @@ class SetupComponent extends HTMLElement {
       
       <div class="setup-container">
         <div class="setup-header">
-          <img src="../../public/images/logo.svg" alt="bots.pm Logo" class="logo">
+          <img src="../public/images/logo.svg" alt="bots.pm Logo" class="logo">
           <h1>Welcome to bots.pm</h1>
           <p>Let's set up your environment to get started</p>
         </div>

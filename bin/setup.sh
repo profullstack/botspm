@@ -15,16 +15,17 @@ echo -e "${GREEN}Setting up Multi-Platform AI Bots...${NC}"
 
 # Check Node.js version
 NODE_VERSION=$(node -v)
-REQUIRED_VERSION="v20"
+REQUIRED_VERSION_MIN="v20"
+REQUIRED_VERSION_MAX="v22"
 
-if [[ $NODE_VERSION != $REQUIRED_VERSION* ]]; then
-  echo -e "${YELLOW}Warning: You are using Node.js $NODE_VERSION, but this project requires Node.js $REQUIRED_VERSION.x${NC}"
+if [[ $NODE_VERSION != $REQUIRED_VERSION_MIN* ]] && [[ $NODE_VERSION != $REQUIRED_VERSION_MAX* ]]; then
+  echo -e "${YELLOW}Warning: You are using Node.js $NODE_VERSION, but this project requires Node.js $REQUIRED_VERSION_MIN.x or $REQUIRED_VERSION_MAX.x${NC}"
   
   if command -v nvm &> /dev/null; then
     echo -e "${GREEN}NVM detected. Attempting to switch to Node.js v20...${NC}"
     nvm use 20 || nvm install 20
   else
-    echo -e "${RED}Please install Node.js v20 before continuing.${NC}"
+    echo -e "${RED}Please install Node.js v20 or v22 before continuing.${NC}"
     echo "Visit https://nodejs.org/ or use a version manager like nvm."
     exit 1
   fi
@@ -83,7 +84,7 @@ if [ "$DB_ENGINE" = "sqlite3" ]; then
   fi
 elif [ "$DB_ENGINE" = "better-sqlite3" ]; then
   echo -e "${GREEN}Installing better-sqlite3...${NC}"
-  pnpm add better-sqlite3 -w
+  pnpm add better-sqlite3@8.5.0 -w
 else
   echo -e "${YELLOW}Unknown database engine: ${DB_ENGINE}. Installing both sqlite3 and better-sqlite3...${NC}"
   
@@ -92,10 +93,10 @@ else
   
   if [ -z "$SQLITE3_VERSION" ]; then
     echo -e "${YELLOW}Could not determine latest sqlite3 version. Using default.${NC}"
-    pnpm add sqlite3 sqlite better-sqlite3 -w
+    pnpm add sqlite3 sqlite better-sqlite3@8.5.0 -w
   else
     echo -e "${GREEN}Using sqlite3 version: ${SQLITE3_VERSION}${NC}"
-    pnpm add sqlite3@${SQLITE3_VERSION} sqlite better-sqlite3 -w
+    pnpm add sqlite3@${SQLITE3_VERSION} sqlite better-sqlite3@8.5.0 -w
   fi
 fi
 

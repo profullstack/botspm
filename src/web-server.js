@@ -1,9 +1,11 @@
-// web-server.js - Simple Express server for the bots.pm web application
+// web-server.js - Hono server for the bots.pm web application
 
-import express from 'express';
-import path from 'path';
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { serveStatic } from 'hono/serve-static';
+import { logger as honoLogger } from 'hono/logger';
 import { fileURLToPath } from 'url';
-import serveStatic from 'serve-static';
+import path from 'path';
 import dotenv from 'dotenv';
 import winston from 'winston';
 
@@ -33,50 +35,78 @@ const logger = winston.createLogger({
   ]
 });
 
-// Initialize Express app
-const app = express();
+// Initialize Hono app
+const app = new Hono();
 const PORT = process.env.WEB_PORT || 8080;
 
+// Middleware
+app.use('*', honoLogger());
+
 // Serve static files from the web directory
-app.use(serveStatic(path.join(__dirname, 'web')));
+app.use('/*', serveStatic({ root: path.join(__dirname, 'web') }));
 
 // Serve static files from the public directory
-app.use(serveStatic(path.join(__dirname, '../public')));
+app.use('/*', serveStatic({ root: path.join(__dirname, '../public') }));
 
 // Serve static files from the assets directory
-app.use('/assets', serveStatic(path.join(__dirname, '../assets')));
+app.use('/assets/*', serveStatic({ root: path.join(__dirname, '../assets') }));
 
 // API proxy
-app.use('/api', (req, res) => {
-  const apiUrl = process.env.API_URL || 'http://localhost:3000/api';
-  const targetUrl = `${apiUrl}${req.url}`;
-  
-  // Forward the request to the API server
-  fetch(targetUrl, {
-    method: req.method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...req.headers
-    },
-    body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
-  })
-  .then(response => response.json())
-  .then(data => res.json(data))
-  .catch(error => {
+app.all('/api/*', async (c) => {
+  try {
+    const apiUrl = process.env.API_URL || 'http://localhost:3000/api';
+    const targetUrl = `${apiUrl}${c.req.path.replace('/api', '')}`;
+    
+    // Forward the request to the API server
+    const response = await fetch(targetUrl, {
+      method: c.req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...Object.fromEntries(c.req.headers)
+      },
+      body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? await c.req.json() : undefined
+    });
+    
+    const data = await response.json();
+    return c.json(data);
+  } catch (error) {
     logger.error('API proxy error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       success: false, 
       message: error.message 
-    });
-  });
+    }, 500);
+  }
 });
 
 // Serve index.html for all other routes (SPA support)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'web/index.html'));
+app.get('*', (c) => {
+  return c.html(path.join(__dirname, 'web/index.html'));
 });
 
 // Start the server
-app.listen(PORT, () => {
-  logger.info(`Web server running on port ${PORT}`);
+async function startServer() {
+  try {
+    serve({
+      fetch: app.fetch,
+      port: PORT
+    });
+    
+    logger.info(`Web server running on port ${PORT}`);
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  logger.info('Shutting down web server...');
+  process.exit(0);
 });
+
+// Start the server if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startServer();
+}
+
+export { app, startServer };

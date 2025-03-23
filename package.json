@@ -92,10 +92,9 @@
     "dotenv": "^16.3.1",
     "electron-log": "^5.0.1",
     "electron-store": "^8.1.0",
-    "hono": "^3.12.0",
+    "hono": "^3.12.12",
     "node-fetch": "^3.3.2",
     "puppeteer-core": "^21.5.0",
-    "serve-static": "^1.15.0",
     "sqlite": "^5.1.1",
     "winston": "^3.11.0"
   },
@@ -107,11 +106,11 @@
     "nodemon": "^3.0.1"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^8.6.0",
+    "better-sqlite3": "^8.5.0",
     "sqlite3": "^5.1.7"
   },
   "engines": {
-    "node": ">=16.0.0 <21.0.0"
+    "node": ">=16.0.0 <23.0.0"
   },
   "volta": {
     "node": "20.11.1"

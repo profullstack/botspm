@@ -15,10 +15,34 @@ class NavigationComponent extends HTMLElement {
   render() {
     this.shadowRoot.innerHTML = `
       <style>
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+          src: url('/public/fonts/inter/inter-regular.woff2') format('woff2');
+        }
+        
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 500;
+          font-display: swap;
+          src: url('/public/fonts/inter/inter-medium.woff2') format('woff2');
+        }
+        
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 700;
+          font-display: swap;
+          src: url('/public/fonts/inter/inter-bold.woff2') format('woff2');
+        }
+        
         :host {
           display: block;
           width: 100%;
-          font-family: var(--font-family-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
         
         .nav-container {
@@ -218,7 +242,7 @@ class NavigationComponent extends HTMLElement {
       <nav class="nav-container">
         <div class="nav-header">
           <div class="logo-container">
-            <img src="../../public/images/logo.svg" alt="bots.pm Logo" class="logo">
+            <img src="../public/images/logo.svg" alt="bots.pm Logo" class="logo">
             <span class="app-name">bots.pm</span>
           </div>
           <button class="nav-toggle" id="navToggle">≡</button>
